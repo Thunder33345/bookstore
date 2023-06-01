@@ -56,4 +56,30 @@ CREATE TABLE sessions
     CONSTRAINT fk_account FOREIGN KEY (account_id) REFERENCES account (id) ON DELETE CASCADE
 );
 
+-- Create a trigger function to keep updated_at in sync
+CREATE FUNCTION sync_updated_at() RETURNS trigger AS
+$$
+BEGIN
+    NEW.updated_at := NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Apply the trigger to all tables
+CREATE TRIGGER trigger_update_timestamp
+    BEFORE UPDATE ON author
+    FOR EACH ROW EXECUTE PROCEDURE sync_updated_at();
+
+CREATE TRIGGER trigger_update_timestamp
+    BEFORE UPDATE ON genre
+    FOR EACH ROW EXECUTE PROCEDURE sync_updated_at();
+
+CREATE TRIGGER trigger_update_timestamp
+    BEFORE UPDATE ON book
+    FOR EACH ROW EXECUTE PROCEDURE sync_updated_at();
+
+CREATE TRIGGER trigger_update_timestamp
+    BEFORE UPDATE ON account
+    FOR EACH ROW EXECUTE PROCEDURE sync_updated_at();
+
 COMMIT;
