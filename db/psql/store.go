@@ -81,7 +81,7 @@ func (s *Store) migrate() error {
 	}
 
 	err = m.Up()
-	if err != nil {
+	if err != migrate.ErrNoChange {
 		return fmt.Errorf("error running migration: %w", err)
 	}
 	return nil
