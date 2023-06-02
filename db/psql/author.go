@@ -69,13 +69,20 @@ func (s *Store) UpdateAuthor(ctx context.Context, author bookstore.Author) error
 	if author.ID == uuid.Nil {
 		return bookstore.MissingIDError
 	}
-	_, err := s.db.ExecContext(ctx, `UPDATE author SET name = $1 WHERE id = $2`, author.Name, author.ID)
+	res, err := s.db.ExecContext(ctx, `UPDATE author SET name = $1 WHERE id = $2`, author.Name, author.ID)
 	if err != nil {
 		var pqErr *pq.Error
 		if errors.As(err, &pqErr) && pqErr.Code == sqlErrUniqueViolation {
 			err = bookstore.NewDuplicateError("author.name")
 		}
 		return fmt.Errorf("updating author: %w", err)
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("error getting affected rows: %w", err)
+	}
+	if rows <= 0 {
+		return fmt.Errorf("updating author=%v: %w", author.ID, bookstore.NewNoResultError("author"))
 	}
 	return nil
 }

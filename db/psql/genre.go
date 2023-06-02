@@ -69,13 +69,20 @@ func (s *Store) UpdateGenre(ctx context.Context, genre bookstore.Genre) error {
 	if genre.ID == uuid.Nil {
 		return fmt.Errorf("updating genre: %w", bookstore.MissingIDError)
 	}
-	_, err := s.db.ExecContext(ctx, `UPDATE genre SET name = $1 WHERE id = $2`, genre.Name, genre.ID)
+	res, err := s.db.ExecContext(ctx, `UPDATE genre SET name = $1 WHERE id = $2`, genre.Name, genre.ID)
 	if err != nil {
 		var pqErr *pq.Error
 		if errors.As(err, &pqErr) && pqErr.Code == sqlErrUniqueViolation {
 			err = bookstore.NewDuplicateError("genre.name")
 		}
 		return fmt.Errorf("updating genre: %w", err)
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("error getting affected rows: %w", err)
+	}
+	if rows <= 0 {
+		return fmt.Errorf("updating genre=%v: %w", genre.ID, bookstore.NewNoResultError("genre"))
 	}
 	return nil
 }
