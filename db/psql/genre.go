@@ -28,7 +28,7 @@ func (s *Store) CreateGenre(ctx context.Context, genre bookstore.Genre) (uuid.UU
 	var id uuid.UUID
 	err := row.Scan(&id)
 	if err != nil {
-		return uuid.Nil, err
+		return uuid.Nil, fmt.Errorf("scanning created genre id: %w", err)
 	}
 	return id, nil
 }
@@ -91,7 +91,7 @@ func (s *Store) DeleteGenre(ctx context.Context, genreID uuid.UUID) error {
 		if errors.As(err, &pqErr) && pqErr.Code == sqlErrRestrictViolation {
 			err = bookstore.NewDependedError("genre")
 		}
-		return fmt.Errorf("deleting genre=%v: %w", genreID, err)
+		return fmt.Errorf("deleting genre.id=%v: %w", genreID, err)
 	}
 	rows, err := res.RowsAffected()
 	if err != nil {
