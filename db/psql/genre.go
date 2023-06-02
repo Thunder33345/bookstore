@@ -2,10 +2,13 @@ package psql
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"github.com/thunder33345/bookstore"
 )
 
@@ -14,23 +17,31 @@ import (
 // returns the uuid of the created genre when successful
 func (s *Store) CreateGenre(ctx context.Context, genre bookstore.Genre) (uuid.UUID, error) {
 	row := s.db.QueryRowxContext(ctx, `INSERT INTO genre(name) VALUES ($1) RETURNING id`, genre.Name)
-	if row.Err() != nil {
-		return uuid.Nil, row.Err()
+	if err := row.Err(); err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == sqlErrUniqueViolation {
+			//we replace the error with a more descriptive one
+			err = bookstore.NewDuplicateError("genre.name")
+		}
+		return uuid.Nil, fmt.Errorf("creating genre.name=%s: %w", genre.Name, err)
 	}
 	var id uuid.UUID
 	err := row.Scan(&id)
 	if err != nil {
 		return uuid.Nil, err
 	}
-	return id, err
+	return id, nil
 }
 
-// GetGenre fetches a genre using it's ID
+// GetGenre fetches a genre using its ID
 func (s *Store) GetGenre(ctx context.Context, genreID uuid.UUID) (bookstore.Genre, error) {
 	var genre bookstore.Genre
 	err := s.db.GetContext(ctx, &genre, `SELECT * FROM genre WHERE id = $1 LIMIT 1`, genreID)
 	if err != nil {
-		return bookstore.Genre{}, fmt.Errorf("error selecting genre=%v: %w", genreID, err)
+		if errors.Is(err, sql.ErrNoRows) {
+			err = bookstore.NewNoResultError("genre.id")
+		}
+		return bookstore.Genre{}, fmt.Errorf("selecting genre.id=%v: %w", genreID, err)
 	}
 	return genre, nil
 }
@@ -47,7 +58,7 @@ func (s *Store) ListGenres(ctx context.Context, limit int, after time.Time) ([]b
 		err = s.db.SelectContext(ctx, &genres, `SELECT * FROM genre ORDER BY created_at LIMIT $1`, limit)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("error selecting limit=%v after=%s: %w", limit, after, err)
+		return nil, fmt.Errorf("listing genre with limit=%v after=%s: %w", limit, after, err)
 	}
 	return genres, nil
 }
@@ -56,10 +67,17 @@ func (s *Store) ListGenres(ctx context.Context, limit int, after time.Time) ([]b
 // note that CreatedAt, UpdatedAt cannot be set
 func (s *Store) UpdateGenre(ctx context.Context, genre bookstore.Genre) error {
 	if genre.ID == uuid.Nil {
-		return fmt.Errorf("missing genre id")
+		return fmt.Errorf("updating genre: %w", bookstore.MissingIDError)
 	}
 	_, err := s.db.ExecContext(ctx, `UPDATE genre SET name = $1 WHERE id = $2`, genre.Name, genre.ID)
-	return err
+	if err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == sqlErrUniqueViolation {
+			err = bookstore.NewDuplicateError("genre.name")
+		}
+		return fmt.Errorf("updating genre: %w", err)
+	}
+	return nil
 }
 
 // DeleteGenre deletes the specified genre using its ID
@@ -69,14 +87,18 @@ func (s *Store) DeleteGenre(ctx context.Context, genreID uuid.UUID) error {
 	}
 	res, err := s.db.ExecContext(ctx, `DELETE FROM genre WHERE id = $1`, genreID)
 	if err != nil {
-		return fmt.Errorf("error running query: %w", err)
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == sqlErrRestrictViolation {
+			err = bookstore.NewDependedError("genre")
+		}
+		return fmt.Errorf("deleting genre=%v: %w", genreID, err)
 	}
 	rows, err := res.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("error getting affected rows: %w", err)
 	}
 	if rows <= 0 {
-		return fmt.Errorf("genre id=%v does not exist", genreID)
+		return fmt.Errorf("deleting genre=%v: %w", genreID, bookstore.NewNoResultError("genre"))
 	}
 	return nil
 }

@@ -1,16 +1,26 @@
 package psql
 
 import (
+	"context"
 	"database/sql"
 	"embed"
 	"fmt"
+	"time"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
+	"github.com/thunder33345/bookstore"
 )
+
+// sqlErrUniqueViolation is a constant used match sql code and generate more useful errors
+const sqlErrUniqueViolation = "23505"
+
+// sqlErrRestrictViolation is a constant used match sql code and generate more useful errors
+const sqlErrRestrictViolation = "23001"
 
 type Store struct {
 	db *sqlx.DB
