@@ -7,14 +7,13 @@ import (
 )
 
 type Book struct {
-	ISBN        uuid.UUID `json:"isbn"`
-	Serial      int       `json:"serial"`
+	ISBN        string    `json:"isbn"`
 	Title       string    `json:"title"`
-	AuthorID    uuid.UUID `json:"author_id"`
-	GenreID     uuid.UUID `json:"genre_id"`
-	PublishYear int       `json:"publish_year"`
+	AuthorID    uuid.UUID `json:"author_id" db:"author_id"`
+	GenreID     uuid.UUID `json:"genre_id" db:"genre_id"`
+	PublishYear int       `json:"publish_year" db:"publish_year"`
 	Fiction     bool      `json:"fiction"`
-	CoverURL    string    `json:"cover_url"`
+	CoverURL    string    `json:"cover_url" db:"cover_file"`
 
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`

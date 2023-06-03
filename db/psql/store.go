@@ -22,6 +22,9 @@ const sqlErrUniqueViolation = "23505"
 // sqlErrRestrictViolation is a constant used match sql code and generate more useful errors
 const sqlErrRestrictViolation = "23001"
 
+// sqlErrForeignKeyViolation is a constant used match sql code and generate more useful errors
+const sqlErrForeignKeyViolation = "23503"
+
 type Store struct {
 	db *sqlx.DB
 	//sqlDb is the standard sql.DB instance, used for migration

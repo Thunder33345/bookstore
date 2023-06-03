@@ -47,3 +47,17 @@ func NewDependedError(resource string) error {
 func (e *DependedError) Error() string {
 	return fmt.Sprintf("%s is being depended by other books", e.resource)
 }
+
+type InvalidDependencyError struct {
+	resource string
+}
+
+func NewInvalidDependencyError(resource string) error {
+	return &InvalidDependencyError{
+		resource: resource,
+	}
+}
+
+func (e *InvalidDependencyError) Error() string {
+	return fmt.Sprintf("invalid value on books.%s", e.resource)
+}
