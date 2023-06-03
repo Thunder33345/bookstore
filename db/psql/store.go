@@ -4,14 +4,14 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"errors"
 	"fmt"
-	"time"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
-	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 	_ "github.com/lib/pq"
 	"github.com/thunder33345/bookstore"
 )
@@ -98,6 +98,30 @@ func (s *Store) migrate() error {
 		return fmt.Errorf("error running migration: %w", err)
 	}
 	return nil
+}
+
+// enrichPQError attempts to adds error type to a pq error
+func enrichPQError(err error, resource string) error {
+	var pqErr *pq.Error
+	if !errors.As(err, &pqErr) {
+		//pass through: leave the error untouched if it's not a pq error
+		return err
+	}
+
+	switch pqErr.Code {
+	case sqlErrUniqueViolation:
+		err = bookstore.NewDuplicateError(resource)
+	case sqlErrForeignKeyViolation:
+		switch pqErr.Constraint { //we use constraint to return more user-friendly errors
+		case "fk_author":
+			err = bookstore.NewInvalidDependencyError("author")
+		case "fk_genre":
+			err = bookstore.NewInvalidDependencyError("genre")
+		}
+	case sqlErrRestrictViolation:
+		err = bookstore.NewDependedError(resource)
+	}
+	return err
 }
 
 // checkAffectedRows is a helper function to simplify checking for affected row

@@ -9,7 +9,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
-	"github.com/lib/pq"
 	"github.com/nullism/bqb"
 	"github.com/thunder33345/bookstore"
 )
@@ -22,20 +21,7 @@ func (s *Store) CreateBook(ctx context.Context, book bookstore.Book) error {
 		`INSERT INTO book(isbn,title,publish_year,cover_file,author_id,genre_id)
 				VALUES ($1,$2,$3,$4,$5,$6)`, book.ISBN, book.Title, book.PublishYear, book.CoverURL, book.AuthorID, book.GenreID)
 	if err != nil {
-		var pqErr *pq.Error
-		if errors.As(err, &pqErr) {
-			switch pqErr.Code {
-			case sqlErrUniqueViolation:
-				err = bookstore.NewDuplicateError("book.isbn")
-			case sqlErrForeignKeyViolation:
-				switch pqErr.Constraint { //we use constraint to return more user-friendly errors
-				case "fk_author":
-					err = bookstore.NewInvalidDependencyError("author")
-				case "fk_genre":
-					err = bookstore.NewInvalidDependencyError("genre")
-				}
-			}
-		}
+		err = enrichPQError(err, "book.isbn")
 		return fmt.Errorf("creating book: %w", err)
 	}
 	return nil
@@ -47,7 +33,7 @@ func (s *Store) GetBook(ctx context.Context, bookID string) (bookstore.Book, err
 	err := s.db.GetContext(ctx, &book, `SELECT * FROM book WHERE isbn = $1 LIMIT 1`, bookID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			err = bookstore.NewNoResultError("genre.id")
+			err = bookstore.NewNoResultError("book.isbn")
 		}
 		return bookstore.Book{}, fmt.Errorf("selecting book.isbn=%v: %w", bookID, err)
 	}
@@ -130,20 +116,7 @@ func (s *Store) UpdateBook(ctx context.Context, book bookstore.Book) error {
 
 	res, err := s.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		var pqErr *pq.Error
-		if errors.As(err, &pqErr) {
-			switch pqErr.Code {
-			case sqlErrUniqueViolation:
-				err = bookstore.NewDuplicateError("book.isbn")
-			case sqlErrForeignKeyViolation:
-				switch pqErr.Constraint { //we use constraint to return more user-friendly errors
-				case "fk_author":
-					err = bookstore.NewInvalidDependencyError("author")
-				case "fk_genre":
-					err = bookstore.NewInvalidDependencyError("genre")
-				}
-			}
-		}
+		err = enrichPQError(err, "book.isbn")
 		return fmt.Errorf("error updating book: %w", err)
 	}
 	err = checkAffectedRows(res, bookstore.NewNoResultError("book"))

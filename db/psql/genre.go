@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/lib/pq"
 	"github.com/thunder33345/bookstore"
 )
 
@@ -18,11 +17,7 @@ import (
 func (s *Store) CreateGenre(ctx context.Context, genre bookstore.Genre) (uuid.UUID, error) {
 	row := s.db.QueryRowxContext(ctx, `INSERT INTO genre(name) VALUES ($1) RETURNING id`, genre.Name)
 	if err := row.Err(); err != nil {
-		var pqErr *pq.Error
-		if errors.As(err, &pqErr) && pqErr.Code == sqlErrUniqueViolation {
-			//we replace the error with a more descriptive one
-			err = bookstore.NewDuplicateError("genre.name")
-		}
+		err = enrichPQError(err, "book.isbn")
 		return uuid.Nil, fmt.Errorf("creating genre.name=%s: %w", genre.Name, err)
 	}
 	var id uuid.UUID
@@ -71,10 +66,7 @@ func (s *Store) UpdateGenre(ctx context.Context, genre bookstore.Genre) error {
 	}
 	res, err := s.db.ExecContext(ctx, `UPDATE genre SET name = $1 WHERE id = $2`, genre.Name, genre.ID)
 	if err != nil {
-		var pqErr *pq.Error
-		if errors.As(err, &pqErr) && pqErr.Code == sqlErrUniqueViolation {
-			err = bookstore.NewDuplicateError("genre.name")
-		}
+		err = enrichPQError(err, "book.isbn")
 		return fmt.Errorf("updating genre: %w", err)
 	}
 	err = checkAffectedRows(res, bookstore.NewNoResultError("genre"))
@@ -91,10 +83,7 @@ func (s *Store) DeleteGenre(ctx context.Context, genreID uuid.UUID) error {
 	}
 	res, err := s.db.ExecContext(ctx, `DELETE FROM genre WHERE id = $1`, genreID)
 	if err != nil {
-		var pqErr *pq.Error
-		if errors.As(err, &pqErr) && pqErr.Code == sqlErrRestrictViolation {
-			err = bookstore.NewDependedError("genre")
-		}
+		err = enrichPQError(err, "book.isbn")
 		return fmt.Errorf("deleting genre.id=%v: %w", genreID, err)
 	}
 	err = checkAffectedRows(res, bookstore.NewNoResultError("genre"))
