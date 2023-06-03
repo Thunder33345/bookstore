@@ -1,7 +1,6 @@
 package psql
 
 import (
-	"context"
 	"database/sql"
 	"embed"
 	"errors"
@@ -110,16 +109,16 @@ func enrichPQError(err error, resource string) error {
 
 	switch pqErr.Code {
 	case sqlErrUniqueViolation:
-		err = bookstore.NewDuplicateError(resource)
+		err = bookstore.NewDuplicateError(resource, err)
 	case sqlErrForeignKeyViolation:
 		switch pqErr.Constraint { //we use constraint to return more user-friendly errors
 		case "fk_author":
-			err = bookstore.NewInvalidDependencyError("author")
+			err = bookstore.NewInvalidDependencyError("author", err)
 		case "fk_genre":
-			err = bookstore.NewInvalidDependencyError("genre")
+			err = bookstore.NewInvalidDependencyError("genre", err)
 		}
 	case sqlErrRestrictViolation:
-		err = bookstore.NewDependedError(resource)
+		err = bookstore.NewDependedError(resource, err)
 	}
 	return err
 }

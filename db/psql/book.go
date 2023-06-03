@@ -33,7 +33,7 @@ func (s *Store) GetBook(ctx context.Context, bookID string) (bookstore.Book, err
 	err := s.db.GetContext(ctx, &book, `SELECT * FROM book WHERE isbn = $1 LIMIT 1`, bookID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			err = bookstore.NewNoResultError("book.isbn")
+			err = bookstore.NewNoResultError("book.isbn", err)
 		}
 		return bookstore.Book{}, fmt.Errorf("selecting book.isbn=%v: %w", bookID, err)
 	}
@@ -119,7 +119,7 @@ func (s *Store) UpdateBook(ctx context.Context, book bookstore.Book) error {
 		err = enrichPQError(err, "book.isbn")
 		return fmt.Errorf("error updating book: %w", err)
 	}
-	err = checkAffectedRows(res, bookstore.NewNoResultError("book"))
+	err = checkAffectedRows(res, bookstore.NewNoResultError("book", err))
 	if err != nil {
 		return fmt.Errorf("updating book=%s: %w", book.ISBN, err)
 	}
@@ -136,7 +136,7 @@ func (s *Store) DeleteBook(ctx context.Context, bookID uuid.UUID) error {
 	if err != nil {
 		return fmt.Errorf("deleting book=%v: %w", bookID, err)
 	}
-	err = checkAffectedRows(res, bookstore.NewNoResultError("book"))
+	err = checkAffectedRows(res, bookstore.NewNoResultError("book", err))
 	if err != nil {
 		return fmt.Errorf("deleting book=%v: %w", bookID, err)
 	}

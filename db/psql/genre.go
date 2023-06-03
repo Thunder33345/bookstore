@@ -34,7 +34,7 @@ func (s *Store) GetGenre(ctx context.Context, genreID uuid.UUID) (bookstore.Genr
 	err := s.db.GetContext(ctx, &genre, `SELECT * FROM genre WHERE id = $1 LIMIT 1`, genreID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			err = bookstore.NewNoResultError("genre.id")
+			err = bookstore.NewNoResultError("genre.id", err)
 		}
 		return bookstore.Genre{}, fmt.Errorf("selecting genre.id=%v: %w", genreID, err)
 	}
@@ -69,7 +69,7 @@ func (s *Store) UpdateGenre(ctx context.Context, genre bookstore.Genre) error {
 		err = enrichPQError(err, "book.isbn")
 		return fmt.Errorf("updating genre: %w", err)
 	}
-	err = checkAffectedRows(res, bookstore.NewNoResultError("genre"))
+	err = checkAffectedRows(res, bookstore.NewNoResultError("genre", err))
 	if err != nil {
 		return fmt.Errorf("updating genre=%v: %w", genre.ID, err)
 	}
@@ -86,7 +86,7 @@ func (s *Store) DeleteGenre(ctx context.Context, genreID uuid.UUID) error {
 		err = enrichPQError(err, "book.isbn")
 		return fmt.Errorf("deleting genre.id=%v: %w", genreID, err)
 	}
-	err = checkAffectedRows(res, bookstore.NewNoResultError("genre"))
+	err = checkAffectedRows(res, bookstore.NewNoResultError("genre", err))
 	if err != nil {
 		return fmt.Errorf("deleting genre=%v: %w", genreID, err)
 	}

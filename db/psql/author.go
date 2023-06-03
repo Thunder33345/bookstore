@@ -34,7 +34,7 @@ func (s *Store) GetAuthor(ctx context.Context, authorID uuid.UUID) (bookstore.Au
 	err := s.db.GetContext(ctx, &author, `SELECT * FROM author WHERE id = $1 LIMIT 1`, authorID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			err = bookstore.NewNoResultError("author.id")
+			err = bookstore.NewNoResultError("author.id", err)
 		}
 		return bookstore.Author{}, fmt.Errorf("selecting author.id=%v: %w", authorID, err)
 	}
@@ -69,9 +69,9 @@ func (s *Store) UpdateAuthor(ctx context.Context, author bookstore.Author) error
 		err = enrichPQError(err, "author.name")
 		return fmt.Errorf("updating author: %w", err)
 	}
-	err = checkAffectedRows(res, bookstore.NewNoResultError("author"))
+	err = checkAffectedRows(res, bookstore.NewNoResultError("author", err))
 	if err != nil {
-		return fmt.Errorf("updating author=%v: %w", author.ID, bookstore.NewNoResultError("author"))
+		return fmt.Errorf("updating author=%v: %w", author.ID, err)
 	}
 	return nil
 }
@@ -86,7 +86,7 @@ func (s *Store) DeleteAuthor(ctx context.Context, authorID uuid.UUID) error {
 		err = enrichPQError(err, "author")
 		return fmt.Errorf("deleting author.id=%v: %w", authorID, err)
 	}
-	err = checkAffectedRows(res, bookstore.NewNoResultError("author"))
+	err = checkAffectedRows(res, bookstore.NewNoResultError("author", err))
 	if err != nil {
 		return fmt.Errorf("deleting author=%v: %w", authorID, err)
 	}
