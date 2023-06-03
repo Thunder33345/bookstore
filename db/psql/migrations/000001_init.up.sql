@@ -2,10 +2,10 @@ BEGIN;
 
 CREATE TABLE author
 (
-    id          uuid        NOT NULL PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name text        NOT NULL UNIQUE CHECK (name <> ''),
-    created_at  timestamptz NOT NULL             DEFAULT now(),
-    updated_at  timestamptz NOT NULL             DEFAULT now()
+    id         uuid        NOT NULL PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name       text        NOT NULL UNIQUE CHECK (name <> ''),
+    created_at timestamptz NOT NULL             DEFAULT now(),
+    updated_at timestamptz NOT NULL             DEFAULT now()
 );
 -- Create index for author.created_at, as we will be using that for paging
 CREATE UNIQUE INDEX index_author ON author USING btree (created_at ASC);
@@ -24,7 +24,7 @@ CREATE TABLE book
     isbn         text PRIMARY KEY NOT NULL CHECK (isbn <> ''),
     title        text             NOT NULL CHECK (title <> ''),
     publish_year integer          NOT NULL CHECK (publish_year > 0),
-    has_cover    boolean     DEFAULT false,
+    cover_file   text        DEFAULT false,
     author_id    uuid             NOT NULL,
     genre_id     uuid             NOT NULL,
     updated_at   timestamptz DEFAULT now(),
@@ -50,7 +50,7 @@ CREATE UNIQUE INDEX index_account ON account USING btree (created_at ASC);
 
 CREATE TABLE sessions
 (
-    account_id    uuid                    NOT NULL,
+    account_id uuid                    NOT NULL,
     token      text PRIMARY KEY UNIQUE NOT NULL CHECK (token <> ''),
     created_at timestamptz DEFAULT now(),
     CONSTRAINT fk_account FOREIGN KEY (account_id) REFERENCES account (id) ON DELETE CASCADE
@@ -67,19 +67,27 @@ $$ LANGUAGE plpgsql;
 
 -- Apply the trigger to all tables
 CREATE TRIGGER trigger_update_timestamp
-    BEFORE UPDATE ON author
-    FOR EACH ROW EXECUTE PROCEDURE sync_updated_at();
+    BEFORE UPDATE
+    ON author
+    FOR EACH ROW
+EXECUTE PROCEDURE sync_updated_at();
 
 CREATE TRIGGER trigger_update_timestamp
-    BEFORE UPDATE ON genre
-    FOR EACH ROW EXECUTE PROCEDURE sync_updated_at();
+    BEFORE UPDATE
+    ON genre
+    FOR EACH ROW
+EXECUTE PROCEDURE sync_updated_at();
 
 CREATE TRIGGER trigger_update_timestamp
-    BEFORE UPDATE ON book
-    FOR EACH ROW EXECUTE PROCEDURE sync_updated_at();
+    BEFORE UPDATE
+    ON book
+    FOR EACH ROW
+EXECUTE PROCEDURE sync_updated_at();
 
 CREATE TRIGGER trigger_update_timestamp
-    BEFORE UPDATE ON account
-    FOR EACH ROW EXECUTE PROCEDURE sync_updated_at();
+    BEFORE UPDATE
+    ON account
+    FOR EACH ROW
+EXECUTE PROCEDURE sync_updated_at();
 
 COMMIT;
