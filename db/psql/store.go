@@ -99,3 +99,20 @@ func (s *Store) migrate() error {
 	}
 	return nil
 }
+
+// checkAffectedRows is a helper function to simplify checking for affected row
+// caller provides the result and noResErr to return, if the affected row is <=0
+func checkAffectedRows(res sql.Result, noResErr error) error {
+	//we try to check affected row
+	rows, err := res.RowsAffected()
+	if err != nil {
+		//this shouldn't happen, but we account for it anyway
+		return fmt.Errorf("error getting affected rows: %w", err)
+	}
+	if rows <= 0 {
+		//if the affected rows is <=0 we return the supplied error
+		return noResErr
+	}
+	//we return nil if everything is ok
+	return nil
+}

@@ -77,11 +77,8 @@ func (s *Store) UpdateAuthor(ctx context.Context, author bookstore.Author) error
 		}
 		return fmt.Errorf("updating author: %w", err)
 	}
-	rows, err := res.RowsAffected()
+	err = checkAffectedRows(res, bookstore.NewNoResultError("author"))
 	if err != nil {
-		return fmt.Errorf("error getting affected rows: %w", err)
-	}
-	if rows <= 0 {
 		return fmt.Errorf("updating author=%v: %w", author.ID, bookstore.NewNoResultError("author"))
 	}
 	return nil
@@ -100,12 +97,9 @@ func (s *Store) DeleteAuthor(ctx context.Context, authorID uuid.UUID) error {
 		}
 		return fmt.Errorf("deleting author.id=%v: %w", authorID, err)
 	}
-	rows, err := res.RowsAffected()
+	err = checkAffectedRows(res, bookstore.NewNoResultError("author"))
 	if err != nil {
-		return fmt.Errorf("error getting affected rows: %w", err)
-	}
-	if rows <= 0 {
-		return fmt.Errorf("deleting author=%v: %w", authorID, bookstore.NewNoResultError("author"))
+		return fmt.Errorf("deleting author=%v: %w", authorID, err)
 	}
 	return nil
 }

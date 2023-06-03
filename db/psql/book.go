@@ -146,13 +146,11 @@ func (s *Store) UpdateBook(ctx context.Context, book bookstore.Book) error {
 		}
 		return fmt.Errorf("error updating book: %w", err)
 	}
-	rows, err := res.RowsAffected()
+	err = checkAffectedRows(res, bookstore.NewNoResultError("book"))
 	if err != nil {
-		return fmt.Errorf("error getting affected rows: %w", err)
+		return fmt.Errorf("updating book=%s: %w", book.ISBN, err)
 	}
-	if rows <= 0 {
-		return fmt.Errorf("updating book=%v: %w", book.ISBN, bookstore.NewNoResultError("book"))
-	}
+
 	return nil
 }
 
@@ -163,14 +161,11 @@ func (s *Store) DeleteBook(ctx context.Context, bookID uuid.UUID) error {
 	}
 	res, err := s.db.ExecContext(ctx, `DELETE FROM book WHERE id = $1`, bookID)
 	if err != nil {
-		return fmt.Errorf("deleting book: %w", err)
+		return fmt.Errorf("deleting book=%v: %w", bookID, err)
 	}
-	rows, err := res.RowsAffected()
+	err = checkAffectedRows(res, bookstore.NewNoResultError("book"))
 	if err != nil {
-		return fmt.Errorf("error getting affected rows: %w", err)
-	}
-	if rows <= 0 {
-		return fmt.Errorf("book id=%v does not exist", bookID)
+		return fmt.Errorf("deleting book=%v: %w", bookID, err)
 	}
 	return nil
 }

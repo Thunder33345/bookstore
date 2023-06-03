@@ -77,12 +77,9 @@ func (s *Store) UpdateGenre(ctx context.Context, genre bookstore.Genre) error {
 		}
 		return fmt.Errorf("updating genre: %w", err)
 	}
-	rows, err := res.RowsAffected()
+	err = checkAffectedRows(res, bookstore.NewNoResultError("genre"))
 	if err != nil {
-		return fmt.Errorf("error getting affected rows: %w", err)
-	}
-	if rows <= 0 {
-		return fmt.Errorf("updating genre=%v: %w", genre.ID, bookstore.NewNoResultError("genre"))
+		return fmt.Errorf("updating genre=%v: %w", genre.ID, err)
 	}
 	return nil
 }
@@ -100,12 +97,9 @@ func (s *Store) DeleteGenre(ctx context.Context, genreID uuid.UUID) error {
 		}
 		return fmt.Errorf("deleting genre.id=%v: %w", genreID, err)
 	}
-	rows, err := res.RowsAffected()
+	err = checkAffectedRows(res, bookstore.NewNoResultError("genre"))
 	if err != nil {
-		return fmt.Errorf("error getting affected rows: %w", err)
-	}
-	if rows <= 0 {
-		return fmt.Errorf("deleting genre=%v: %w", genreID, bookstore.NewNoResultError("genre"))
+		return fmt.Errorf("deleting genre=%v: %w", genreID, err)
 	}
 	return nil
 }
