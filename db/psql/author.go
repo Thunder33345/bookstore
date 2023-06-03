@@ -67,7 +67,7 @@ func (s *Store) ListAuthors(ctx context.Context, limit int, after time.Time) ([]
 // note that CreatedAt, UpdatedAt cannot be set
 func (s *Store) UpdateAuthor(ctx context.Context, author bookstore.Author) error {
 	if author.ID == uuid.Nil {
-		return bookstore.MissingIDError
+		return bookstore.ErrMissingID
 	}
 	res, err := s.db.ExecContext(ctx, `UPDATE author SET name = $1 WHERE id = $2`, author.Name, author.ID)
 	if err != nil {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-var MissingIDError = errors.New("missing id")
+var ErrMissingID = errors.New("missing id")
 
 type NoResultError struct {
 	resource string
@@ -44,6 +44,7 @@ func NewDependedError(resource string) error {
 		resource: resource,
 	}
 }
+
 func (e *DependedError) Error() string {
 	return fmt.Sprintf("%s is being depended by other books", e.resource)
 }

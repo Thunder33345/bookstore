@@ -67,7 +67,7 @@ func (s *Store) ListGenres(ctx context.Context, limit int, after time.Time) ([]b
 // note that CreatedAt, UpdatedAt cannot be set
 func (s *Store) UpdateGenre(ctx context.Context, genre bookstore.Genre) error {
 	if genre.ID == uuid.Nil {
-		return fmt.Errorf("updating genre: %w", bookstore.MissingIDError)
+		return fmt.Errorf("updating genre: %w", bookstore.ErrMissingID)
 	}
 	res, err := s.db.ExecContext(ctx, `UPDATE genre SET name = $1 WHERE id = $2`, genre.Name, genre.ID)
 	if err != nil {

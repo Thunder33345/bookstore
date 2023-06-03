@@ -110,7 +110,7 @@ func (s *Store) ListBooks(ctx context.Context, limit int, after time.Time, genre
 // note that CreatedAt, UpdatedAt cannot be set
 func (s *Store) UpdateBook(ctx context.Context, book bookstore.Book) error {
 	if book.ISBN == "" {
-		return bookstore.MissingIDError
+		return bookstore.ErrMissingID
 	}
 
 	//we use query builder to create optional updates book dates
