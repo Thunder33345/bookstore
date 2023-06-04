@@ -16,15 +16,21 @@ import (
 // CreateBook creates a book using provided model
 // note that CreatedAt, UpdatedAt are ignored
 // returns the uuid of the created book when successful
-func (s *Store) CreateBook(ctx context.Context, book bookstore.Book) error {
-	_, err := s.db.ExecContext(ctx,
+func (s *Store) CreateBook(ctx context.Context, book bookstore.Book) (bookstore.Book, error) {
+	row := s.db.QueryRowxContext(ctx,
 		`INSERT INTO book(isbn,title,publish_year,cover_file,author_id,genre_id)
-				VALUES ($1,$2,$3,$4,$5,$6)`, book.ISBN, book.Title, book.PublishYear, book.CoverURL, book.AuthorID, book.GenreID)
-	if err != nil {
+				VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`, book.ISBN, book.Title, book.PublishYear, book.CoverURL, book.AuthorID, book.GenreID)
+	if err := row.Err(); err != nil {
 		err = enrichPQError(err, "book.isbn")
-		return fmt.Errorf("creating book: %w", err)
+		return bookstore.Book{}, fmt.Errorf("creating book: %w", err)
 	}
-	return nil
+
+	var created bookstore.Book
+	err := row.Scan(&created)
+	if err != nil {
+		return bookstore.Book{}, fmt.Errorf("scanning created book: %w", err)
+	}
+	return created, nil
 }
 
 // GetBook fetches n book using its ID

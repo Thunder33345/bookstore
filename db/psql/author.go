@@ -14,18 +14,20 @@ import (
 // CreateAuthor creates an author using provided model
 // note that ID, CreatedAt, UpdatedAt are all ignored
 // returns the uuid of the created author when successful
-func (s *Store) CreateAuthor(ctx context.Context, author bookstore.Author) (uuid.UUID, error) {
-	row := s.db.QueryRowxContext(ctx, `INSERT INTO author(name) VALUES ($1) RETURNING id`, author.Name)
+func (s *Store) CreateAuthor(ctx context.Context, author bookstore.Author) (bookstore.Author, error) {
+	row := s.db.QueryRowxContext(ctx, `INSERT INTO author(name) VALUES ($1) RETURNING *`, author.Name)
 	if err := row.Err(); err != nil {
 		err = enrichPQError(err, "author.name")
-		return uuid.Nil, fmt.Errorf("creating author.name=%s: %w", author.Name, err)
+		return bookstore.Author{}, fmt.Errorf("creating author.name=%s: %w", author.Name, err)
 	}
-	var id uuid.UUID
-	err := row.Scan(&id)
+
+	var created bookstore.Author
+	err := row.Scan(&created)
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("scanning created author id: %w", err)
+		return bookstore.Author{}, fmt.Errorf("scanning created author: %w", err)
 	}
-	return id, nil
+	return created, nil
+
 }
 
 // GetAuthor fetches an author using its ID

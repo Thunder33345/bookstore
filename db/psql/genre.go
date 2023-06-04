@@ -14,18 +14,19 @@ import (
 // CreateGenre creates a genre using provided model
 // note that ID, CreatedAt, UpdatedAt are all ignored
 // returns the uuid of the created genre when successful
-func (s *Store) CreateGenre(ctx context.Context, genre bookstore.Genre) (uuid.UUID, error) {
-	row := s.db.QueryRowxContext(ctx, `INSERT INTO genre(name) VALUES ($1) RETURNING id`, genre.Name)
+func (s *Store) CreateGenre(ctx context.Context, genre bookstore.Genre) (bookstore.Genre, error) {
+	row := s.db.QueryRowxContext(ctx, `INSERT INTO genre(name) VALUES ($1) RETURNING *`, genre.Name)
 	if err := row.Err(); err != nil {
 		err = enrichPQError(err, "book.isbn")
-		return uuid.Nil, fmt.Errorf("creating genre.name=%s: %w", genre.Name, err)
+		return bookstore.Genre{}, fmt.Errorf("creating genre.name=%s: %w", genre.Name, err)
 	}
-	var id uuid.UUID
-	err := row.Scan(&id)
+
+	var created bookstore.Genre
+	err := row.Scan(&created)
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("scanning created genre id: %w", err)
+		return bookstore.Genre{}, fmt.Errorf("scanning created genre: %w", err)
 	}
-	return id, nil
+	return created, nil
 }
 
 // GetGenre fetches a genre using its ID
