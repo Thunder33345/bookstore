@@ -54,7 +54,7 @@ func (s *Store) ListAuthors(ctx context.Context, limit int, after uuid.UUID) ([]
 	} else {
 		err = s.db.SelectContext(ctx, &authors, `SELECT * FROM author ORDER BY created_at LIMIT $1`, limit)
 	}
-	err = enrichListPQError(err, after, "author")
+	err = enrichListPQError(err, "author")
 
 	if err != nil {
 		return nil, fmt.Errorf("listing authors limit=%v after=%s: %w", limit, after, err)

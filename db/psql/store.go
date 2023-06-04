@@ -11,7 +11,6 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
-	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	_ "github.com/lib/pq"
@@ -137,7 +136,7 @@ func enrichPQError(err error, resource string) error {
 
 // enrichListPQError attempts to add error type on a listing request
 // currently it only handles raised exception, which is raised in our query code
-func enrichListPQError(err error, id uuid.UUID, resource string) error {
+func enrichListPQError(err error, resource string) error {
 	var pqErr *pq.Error
 	if !errors.As(err, &pqErr) {
 		//pass through: leave the error untouched if it's not a pq error
@@ -146,7 +145,7 @@ func enrichListPQError(err error, id uuid.UUID, resource string) error {
 
 	switch pqErr.Code {
 	case sqlErrRaisedException:
-		err = bookstore.NewNonExistentIDError(resource, id, err)
+		err = bookstore.NewNonExistentIDError(resource, err)
 	}
 	return err
 }

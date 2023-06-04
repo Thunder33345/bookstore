@@ -54,7 +54,7 @@ func (s *Store) ListGenres(ctx context.Context, limit int, after uuid.UUID) ([]b
 	} else {
 		err = s.db.SelectContext(ctx, &genres, `SELECT * FROM genre ORDER BY created_at LIMIT $1`, limit)
 	}
-	err = enrichListPQError(err, after, "genre")
+	err = enrichListPQError(err, "genre")
 
 	if err != nil {
 		return nil, fmt.Errorf("listing genre with limit=%v after=%s: %w", limit, after, err)

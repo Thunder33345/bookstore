@@ -3,8 +3,6 @@ package bookstore
 import (
 	"errors"
 	"fmt"
-
-	"github.com/google/uuid"
 )
 
 var ErrMissingID = errors.New("missing id")
@@ -91,20 +89,18 @@ func (e *InvalidDependencyError) Unwrap() error {
 // NonExistentIDError is returned when paging while using an invalid UUID as the after parameter
 type NonExistentIDError struct {
 	resourceType string
-	id           uuid.UUID
 	err          error
 }
 
-func NewNonExistentIDError(resourceType string, id uuid.UUID, err error) error {
+func NewNonExistentIDError(resourceType string, err error) error {
 	return &NonExistentIDError{
 		resourceType: resourceType,
-		id:           id,
 		err:          err,
 	}
 }
 
 func (e *NonExistentIDError) Error() string {
-	return fmt.Sprintf(`nonexistent UUID given in "after" while paging on %s`, e.resourceType)
+	return fmt.Sprintf(`nonexistent ID given in "after" while paging on %s`, e.resourceType)
 }
 
 func (e *NonExistentIDError) Unwrap() error {
