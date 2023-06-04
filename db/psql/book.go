@@ -134,8 +134,8 @@ func (s *Store) UpdateBook(ctx context.Context, book bookstore.Book) error {
 }
 
 // DeleteBook deletes the specified book using its ID
-func (s *Store) DeleteBook(ctx context.Context, bookID uuid.UUID) error {
-	if bookID == uuid.Nil {
+func (s *Store) DeleteBook(ctx context.Context, bookID string) error {
+	if bookID == "" {
 		return fmt.Errorf("missing book id")
 	}
 	res, err := s.db.ExecContext(ctx, `DELETE FROM book WHERE id = $1`, bookID)
