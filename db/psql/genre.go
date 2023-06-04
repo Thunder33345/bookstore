@@ -21,7 +21,7 @@ func (s *Store) CreateGenre(ctx context.Context, genre bookstore.Genre) (booksto
 	}
 
 	var created bookstore.Genre
-	err := row.Scan(&created)
+	err := row.StructScan(&created)
 	if err != nil {
 		return bookstore.Genre{}, fmt.Errorf("scanning created genre: %w", err)
 	}

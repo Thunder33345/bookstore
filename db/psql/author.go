@@ -21,7 +21,7 @@ func (s *Store) CreateAuthor(ctx context.Context, author bookstore.Author) (book
 	}
 
 	var created bookstore.Author
-	err := row.Scan(&created)
+	err := row.StructScan(&created)
 	if err != nil {
 		return bookstore.Author{}, fmt.Errorf("scanning created author: %w", err)
 	}

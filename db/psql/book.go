@@ -25,7 +25,7 @@ func (s *Store) CreateBook(ctx context.Context, book bookstore.Book) (bookstore.
 	}
 
 	var created bookstore.Book
-	err := row.Scan(&created)
+	err := row.StructScan(&created)
 	if err != nil {
 		return bookstore.Book{}, fmt.Errorf("scanning created book: %w", err)
 	}
