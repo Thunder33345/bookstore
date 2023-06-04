@@ -16,7 +16,7 @@ import (
 func (s *Store) CreateGenre(ctx context.Context, genre bookstore.Genre) (bookstore.Genre, error) {
 	row := s.db.QueryRowxContext(ctx, `INSERT INTO genre(name) VALUES ($1) RETURNING *`, genre.Name)
 	if err := row.Err(); err != nil {
-		err = enrichPQError(err, "book.isbn")
+		err = enrichPQError(err, "genre.name")
 		return bookstore.Genre{}, fmt.Errorf("creating genre.name=%s: %w", genre.Name, err)
 	}
 
@@ -70,7 +70,7 @@ func (s *Store) UpdateGenre(ctx context.Context, genre bookstore.Genre) error {
 	}
 	res, err := s.db.ExecContext(ctx, `UPDATE genre SET name = $1 WHERE id = $2`, genre.Name, genre.ID)
 	if err != nil {
-		err = enrichPQError(err, "book.isbn")
+		err = enrichPQError(err, "genre.name")
 		return fmt.Errorf("updating genre: %w", err)
 	}
 	err = checkAffectedRows(res, bookstore.NewNoResultError("genre", err))
@@ -87,7 +87,7 @@ func (s *Store) DeleteGenre(ctx context.Context, genreID uuid.UUID) error {
 	}
 	res, err := s.db.ExecContext(ctx, `DELETE FROM genre WHERE id = $1`, genreID)
 	if err != nil {
-		err = enrichPQError(err, "book.isbn")
+		err = enrichDeletePQError(err, "genre")
 		return fmt.Errorf("deleting genre.id=%v: %w", genreID, err)
 	}
 	err = checkAffectedRows(res, bookstore.NewNoResultError("genre", err))

@@ -21,9 +21,6 @@ import (
 // sqlErrUniqueViolation is a constant used match sql code and generate more useful errors
 const sqlErrUniqueViolation = "23505"
 
-// sqlErrRestrictViolation is a constant used match sql code and generate more useful errors
-const sqlErrRestrictViolation = "23001"
-
 // sqlErrForeignKeyViolation is a constant used match sql code and generate more useful errors
 const sqlErrForeignKeyViolation = "23503"
 
@@ -134,8 +131,6 @@ func enrichPQError(err error, resource string) error {
 		case "fk_genre":
 			err = bookstore.NewInvalidDependencyError("genre", err)
 		}
-	case sqlErrRestrictViolation:
-		err = bookstore.NewDependedError(resource, err)
 	}
 	return err
 }
@@ -152,6 +147,20 @@ func enrichListPQError(err error, id uuid.UUID, resource string) error {
 	switch pqErr.Code {
 	case sqlErrRaisedException:
 		err = bookstore.NewNonExistentIDError(resource, id, err)
+	}
+	return err
+}
+
+func enrichDeletePQError(err error, resource string) error {
+	var pqErr *pq.Error
+	if !errors.As(err, &pqErr) {
+		//pass through: leave the error untouched if it's not a pq error
+		return err
+	}
+
+	switch pqErr.Code {
+	case sqlErrForeignKeyViolation: //foreign key errors while deleting means something is being depended on
+		err = bookstore.NewDependedError(resource, err)
 	}
 	return err
 }

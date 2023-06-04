@@ -54,7 +54,7 @@ func (s *Store) ListAuthors(ctx context.Context, limit int, after uuid.UUID) ([]
 	} else {
 		err = s.db.SelectContext(ctx, &authors, `SELECT * FROM author ORDER BY created_at LIMIT $1`, limit)
 	}
-	err = enrichListPQError(err, after, "genre")
+	err = enrichListPQError(err, after, "author")
 
 	if err != nil {
 		return nil, fmt.Errorf("listing authors limit=%v after=%s: %w", limit, after, err)
@@ -87,7 +87,7 @@ func (s *Store) DeleteAuthor(ctx context.Context, authorID uuid.UUID) error {
 	}
 	res, err := s.db.ExecContext(ctx, `DELETE FROM author WHERE id = $1`, authorID)
 	if err != nil {
-		err = enrichPQError(err, "author")
+		err = enrichDeletePQError(err, "author")
 		return fmt.Errorf("deleting author.id=%v: %w", authorID, err)
 	}
 	err = checkAffectedRows(res, bookstore.NewNoResultError("author", err))
