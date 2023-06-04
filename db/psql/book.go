@@ -91,6 +91,7 @@ func (s *Store) ListBooks(ctx context.Context, limit int, after string, genresId
 	query = s.db.Rebind(query)
 	err = s.db.SelectContext(ctx, &books, query, args...)
 
+	err = enrichListPQError(err, "book")
 	if err != nil {
 		return nil, fmt.Errorf("selecting book limit=%v after=%s genres=%v authors=%v: %w", limit, after, genresId, authorsId, err)
 	}
