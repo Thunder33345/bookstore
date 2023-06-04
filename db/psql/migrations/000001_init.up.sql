@@ -24,7 +24,8 @@ CREATE TABLE book
     isbn         text PRIMARY KEY NOT NULL CHECK (isbn <> ''),
     title        text             NOT NULL CHECK (title <> ''),
     publish_year integer          NOT NULL CHECK (publish_year > 0),
-    cover_file   text        DEFAULT false,
+    fiction      boolean          NOT NULL,
+    cover_file   text,
     author_id    uuid             NOT NULL,
     genre_id     uuid             NOT NULL,
     updated_at   timestamptz DEFAULT now(),
@@ -57,11 +58,13 @@ CREATE TABLE sessions
 );
 
 -- create a function to raise errors, this is used if our sub-query fails
-create or replace function raise_error_tz(text) returns timestamptz as $$
+create or replace function raise_error_tz(text) returns timestamptz as
+$$
 begin
     raise exception '%', $1;
     return '1970-01-01'::timestamptz;
-end; $$ language plpgsql;
+end;
+$$ language plpgsql;
 
 -- Create a trigger function to keep updated_at in sync
 CREATE FUNCTION sync_updated_at() RETURNS trigger AS

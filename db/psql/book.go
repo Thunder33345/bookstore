@@ -17,8 +17,8 @@ import (
 // returns the uuid of the created book when successful
 func (s *Store) CreateBook(ctx context.Context, book bookstore.Book) (bookstore.Book, error) {
 	row := s.db.QueryRowxContext(ctx,
-		`INSERT INTO book(isbn,title,publish_year,cover_file,author_id,genre_id)
-				VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`, book.ISBN, book.Title, book.PublishYear, book.CoverURL, book.AuthorID, book.GenreID)
+		`INSERT INTO book(isbn,title,publish_year,fiction, cover_file,author_id,genre_id)
+				VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`, book.ISBN, book.Title, book.PublishYear, book.Fiction, book.CoverURL, book.AuthorID, book.GenreID)
 	if err := row.Err(); err != nil {
 		err = enrichPQError(err, "book.isbn")
 		return bookstore.Book{}, fmt.Errorf("creating book: %w", err)
@@ -62,7 +62,7 @@ func (s *Store) ListBooks(ctx context.Context, limit int, after string, genresId
 	if after != "" {
 		//if after uuid is provided, we add WHERE created_at > after via sub query to perform pagination
 		//we use COALESCE to trigger a function that raises error if the selected ISBN does not exist
-		where.Space(`created_at > COALESCE((SELECT created_at FROM genre WHERE isbn = ?),raise_error_tz('Nonexistent UUID'))`, after)
+		where.Space(`created_at > COALESCE((SELECT created_at FROM genre WHERE isbn = ?),raise_error_tz('Nonexistent ISBN'))`, after)
 	}
 	if len(genresId) > 0 {
 		where.And(`genre_id IN (?)`, genresId)
@@ -113,8 +113,8 @@ func (s *Store) UpdateBook(ctx context.Context, book bookstore.Book) error {
 	if !book.UpdatedAt.IsZero() {
 		opt.Comma(`updated_at = $1`, book.UpdatedAt)
 	}
-	q := bqb.New(`UPDATE book SET title = ?, publish_year = ?, cover_file = ?, author_id = ?, genre_id = ? ? WHERE isbn = ?`,
-		book.Title, book.PublishYear, book.CoverURL, book.AuthorID, book.GenreID, opt, book.ISBN)
+	q := bqb.New(`UPDATE book SET title = ?, publish_year = ?, fiction = ?, cover_file = ?, author_id = ?, genre_id = ? ? WHERE isbn = ?`,
+		book.Title, book.PublishYear, book.Fiction, book.CoverURL, book.AuthorID, book.GenreID, opt, book.ISBN)
 	query, args, err := q.ToPgsql()
 	if err != nil {
 		return fmt.Errorf("bqb building query: %w", err)
