@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/thunder33345/bookstore"
@@ -27,7 +26,6 @@ func (s *Store) CreateAuthor(ctx context.Context, author bookstore.Author) (book
 		return bookstore.Author{}, fmt.Errorf("scanning created author: %w", err)
 	}
 	return created, nil
-
 }
 
 // GetAuthor fetches an author using its ID
@@ -45,15 +43,19 @@ func (s *Store) GetAuthor(ctx context.Context, authorID uuid.UUID) (bookstore.Au
 
 // ListAuthors returns a list of authors
 // to paginate, use the last Author.CreatedAt you received
-func (s *Store) ListAuthors(ctx context.Context, limit int, after time.Time) ([]bookstore.Author, error) {
+func (s *Store) ListAuthors(ctx context.Context, limit int, after uuid.UUID) ([]bookstore.Author, error) {
 	authors := make([]bookstore.Author, 0, limit)
 	var err error
-	if !after.IsZero() {
-		//after time is provided, we add WHERE created_at > after to perform pagination
-		err = s.db.SelectContext(ctx, &authors, `SELECT * FROM author WHERE created_at > $2 ORDER BY created_at LIMIT $1`, limit, after)
+	if after != uuid.Nil {
+		//if after uuid is provided, we add WHERE created_at > after via sub query to perform pagination
+		//we use COALESCE to trigger a function that raises error if the selected ID does not exist
+		query := `SELECT * FROM author WHERE created_at > COALESCE((SELECT created_at FROM author WHERE id = $2),raise_error_tz('Nonexistent UUID')) ORDER BY created_at LIMIT $1`
+		err = s.db.SelectContext(ctx, &authors, query, limit, after)
 	} else {
 		err = s.db.SelectContext(ctx, &authors, `SELECT * FROM author ORDER BY created_at LIMIT $1`, limit)
 	}
+	err = enrichListPQError(err, after, "genre")
+
 	if err != nil {
 		return nil, fmt.Errorf("listing authors limit=%v after=%s: %w", limit, after, err)
 	}

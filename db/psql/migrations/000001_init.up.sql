@@ -56,6 +56,13 @@ CREATE TABLE sessions
     CONSTRAINT fk_account FOREIGN KEY (account_id) REFERENCES account (id) ON DELETE CASCADE
 );
 
+-- create a function to raise errors, this is used if our sub-query fails
+create or replace function raise_error_tz(text) returns timestamptz as $$
+begin
+    raise exception '%', $1;
+    return '1970-01-01'::timestamptz;
+end; $$ language plpgsql;
+
 -- Create a trigger function to keep updated_at in sync
 CREATE FUNCTION sync_updated_at() RETURNS trigger AS
 $$

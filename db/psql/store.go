@@ -9,6 +9,7 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	_ "github.com/lib/pq"
@@ -23,6 +24,9 @@ const sqlErrRestrictViolation = "23001"
 
 // sqlErrForeignKeyViolation is a constant used match sql code and generate more useful errors
 const sqlErrForeignKeyViolation = "23503"
+
+// sqlErrRaisedException is used to match errors raised in sql and replaced with more useful errors
+const sqlErrRaisedException = "P0001"
 
 type Store struct {
 	db *sqlx.DB
@@ -39,6 +43,7 @@ func New(connStr string) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
+	sqlDb.SetMaxOpenConns(4)
 
 	//we wrap the sql.db in sqlx, this is what we will normally use
 	db := sqlx.NewDb(sqlDb, "postgres")
@@ -119,6 +124,22 @@ func enrichPQError(err error, resource string) error {
 		}
 	case sqlErrRestrictViolation:
 		err = bookstore.NewDependedError(resource, err)
+	}
+	return err
+}
+
+// enrichListPQError attempts to add error type on a listing request
+// currently it only handles raised exception, which is raised in our query code
+func enrichListPQError(err error, id uuid.UUID, resource string) error {
+	var pqErr *pq.Error
+	if !errors.As(err, &pqErr) {
+		//pass through: leave the error untouched if it's not a pq error
+		return err
+	}
+
+	switch pqErr.Code {
+	case sqlErrRaisedException:
+		err = bookstore.NewNonExistentIDError(resource, id, err)
 	}
 	return err
 }

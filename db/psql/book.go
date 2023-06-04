@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
@@ -47,12 +46,12 @@ func (s *Store) GetBook(ctx context.Context, bookID string) (bookstore.Book, err
 }
 
 // ListBooks returns a list of books
-// to paginate, use the last Book.CreatedAt you received
+// to paginate, use the last Book.ISBN you received
 // you can filter using a list of genre and author ids
 // it will return if a book matches one of the provided authors and genres
 // leaving it blank will omit filtering
 // searchTitle performs fuzzy searching on the title of the book
-func (s *Store) ListBooks(ctx context.Context, limit int, after time.Time, genresId []uuid.UUID, authorsId []uuid.UUID, searchTitle string) ([]bookstore.Book, error) {
+func (s *Store) ListBooks(ctx context.Context, limit int, after string, genresId []uuid.UUID, authorsId []uuid.UUID, searchTitle string) ([]bookstore.Book, error) {
 	books := make([]bookstore.Book, 0, limit)
 	var err error
 	//using bqb to build more complicated queries
@@ -60,9 +59,10 @@ func (s *Store) ListBooks(ctx context.Context, limit int, after time.Time, genre
 	sel := bqb.New(`SELECT * FROM book`)
 
 	where := bqb.Optional(`WHERE`)
-	if !after.IsZero() {
-		//after time is provided, we add WHERE created_at > after to perform pagination
-		where.Space(`created_at > ?`, after)
+	if after != "" {
+		//if after uuid is provided, we add WHERE created_at > after via sub query to perform pagination
+		//we use COALESCE to trigger a function that raises error if the selected ISBN does not exist
+		where.Space(`created_at > COALESCE((SELECT created_at FROM genre WHERE isbn = ?),raise_error_tz('Nonexistent UUID'))`, after)
 	}
 	if len(genresId) > 0 {
 		where.And(`genre_id IN (?)`, genresId)

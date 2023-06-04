@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/thunder33345/bookstore"
@@ -44,15 +43,19 @@ func (s *Store) GetGenre(ctx context.Context, genreID uuid.UUID) (bookstore.Genr
 
 // ListGenres returns a list of genres
 // to paginate, use the last Genre.CreatedAt you received
-func (s *Store) ListGenres(ctx context.Context, limit int, after time.Time) ([]bookstore.Genre, error) {
+func (s *Store) ListGenres(ctx context.Context, limit int, after uuid.UUID) ([]bookstore.Genre, error) {
 	genres := make([]bookstore.Genre, 0, limit)
 	var err error
-	if !after.IsZero() {
-		//after time is provided, we add WHERE created_at > after to perform pagination
-		err = s.db.SelectContext(ctx, &genres, `SELECT * FROM genre WHERE created_at > $2 ORDER BY created_at LIMIT $1`, limit, after)
+	if after != uuid.Nil {
+		//if after uuid is provided, we add WHERE created_at > after via sub query to perform pagination
+		//we use COALESCE to trigger a function that raises error if the selected ID does not exist
+		query := `SELECT * FROM genre WHERE created_at > COALESCE((SELECT created_at FROM genre WHERE id = $2),raise_error_tz('Nonexistent UUID')) ORDER BY created_at LIMIT $1`
+		err = s.db.SelectContext(ctx, &genres, query, limit, after)
 	} else {
 		err = s.db.SelectContext(ctx, &genres, `SELECT * FROM genre ORDER BY created_at LIMIT $1`, limit)
 	}
+	err = enrichListPQError(err, after, "genre")
+
 	if err != nil {
 		return nil, fmt.Errorf("listing genre with limit=%v after=%s: %w", limit, after, err)
 	}
