@@ -112,8 +112,8 @@ func (s *Store) UpdateBook(ctx context.Context, book bookstore.Book) error {
 	if !book.UpdatedAt.IsZero() {
 		opt.Comma(`updated_at = $1`, book.UpdatedAt)
 	}
-	q := bqb.New(`UPDATE book SET title = $2, publish_year = $3, cover_file = $4, author_id = $5, genre_id = $6 $7 WHERE isbn = $1`,
-		book.ISBN, book.Title, book.PublishYear, book.CoverURL, book.AuthorID, book.GenreID, opt)
+	q := bqb.New(`UPDATE book SET title = ?, publish_year = ?, cover_file = ?, author_id = ?, genre_id = ? ? WHERE isbn = ?`,
+		book.Title, book.PublishYear, book.CoverURL, book.AuthorID, book.GenreID, opt, book.ISBN)
 	query, args, err := q.ToPgsql()
 	if err != nil {
 		return fmt.Errorf("bqb building query: %w", err)
@@ -137,7 +137,7 @@ func (s *Store) DeleteBook(ctx context.Context, bookID string) error {
 	if bookID == "" {
 		return fmt.Errorf("missing book id")
 	}
-	res, err := s.db.ExecContext(ctx, `DELETE FROM book WHERE id = $1`, bookID)
+	res, err := s.db.ExecContext(ctx, `DELETE FROM book WHERE isbn = $1`, bookID)
 	if err != nil {
 		return fmt.Errorf("deleting book=%v: %w", bookID, err)
 	}
