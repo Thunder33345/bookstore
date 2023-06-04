@@ -1,10 +1,12 @@
 package psql
 
 import (
+	"context"
 	"database/sql"
 	"embed"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -43,7 +45,6 @@ func New(connStr string) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	sqlDb.SetMaxOpenConns(4)
 
 	//we wrap the sql.db in sqlx, this is what we will normally use
 	db := sqlx.NewDb(sqlDb, "postgres")
@@ -63,6 +64,17 @@ func (s *Store) Init() error {
 	err = s.migrate()
 	if err != nil {
 		return fmt.Errorf("error migrating: %w", err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	var name string
+	err = s.db.GetContext(ctx, &name, `SELECT extname FROM pg_extension WHERE extname = 'pg_trgm' LIMIT 1`)
+	if err != nil {
+		return fmt.Errorf(`error selecting for "pg_trgm": %w`, err)
+	}
+	if name != "pg_trgm" {
+		return fmt.Errorf(`error missing psql extension "pg_trgm", make sure it's enabled and installed'`)
 	}
 	return nil
 }
