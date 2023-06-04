@@ -89,7 +89,6 @@ func (s *Store) ListBooks(ctx context.Context, limit int, after string, genresId
 		return nil, fmt.Errorf("sqlx building query: %w", err)
 	}
 	query = s.db.Rebind(query)
-	fmt.Printf("query:%s\nargs:%v\n", query, args)
 	err = s.db.SelectContext(ctx, &books, query, args...)
 
 	if err != nil {
