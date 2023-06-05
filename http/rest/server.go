@@ -9,6 +9,8 @@ import (
 	"github.com/thunder33345/bookstore"
 )
 
+// Handler is the REST handler struct
+// this stores the dependencies and some configuration
 type Handler struct {
 	store             store
 	cover             coverStore
@@ -16,17 +18,21 @@ type Handler struct {
 	ignoreInvalidIBSN bool
 }
 
-func NewHandler(store store, cover coverStore) *Handler {
-	return &Handler{
-		store:             store,
-		cover:             cover,
-		maxListLimit:      100,
-		ignoreInvalidIBSN: true,
+// NewHandler creates a new Handler with given parameters
+func NewHandler(store store, cover coverStore, options ...Option) *Handler {
+	h := Handler{
+		store:        store,
+		cover:        cover,
+		maxListLimit: 100,
 	}
+	for _, option := range options {
+		h = option(h)
+	}
+	return &h
 }
 
+// Mount will mount the whole rest handlers onto the given chi router
 func (h *Handler) Mount(r chi.Router) {
-
 	r.Route("/genres", func(r chi.Router) {
 		r.With(h.PaginationUUIDMiddleware).Get("/", h.ListGenres)
 		r.Post("/", h.CreateGenre)
@@ -60,6 +66,8 @@ func (h *Handler) Mount(r chi.Router) {
 	})
 }
 
+// store is an interface of the DB
+// using interfaces allow us to create a loose coupling with the database
 type store interface {
 	Init() error
 	CreateGenre(ctx context.Context, genre bookstore.Genre) (bookstore.Genre, error)
@@ -79,6 +87,7 @@ type store interface {
 	DeleteBook(ctx context.Context, bookID string) error
 }
 
+// coverStore is a minimal interface of fs.Store
 type coverStore interface {
 	StoreCover(ctx context.Context, bookID string, img io.ReadSeeker) error
 	RemoveCover(ctx context.Context, bookID string) error
