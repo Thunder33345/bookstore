@@ -133,6 +133,20 @@ func (s *Store) UpdateBook(ctx context.Context, book bookstore.Book) error {
 	return nil
 }
 
+// UpdateBookCover updates the provided book cover using an ID
+func (s *Store) UpdateBookCover(ctx context.Context, bookID string, cover string) error {
+	res, err := s.db.ExecContext(ctx, `UPDATE book SET cover_file = $1 WHERE isbn = $2`, cover, bookID)
+	if err != nil {
+		err = enrichPQError(err, "book.isbn")
+		return fmt.Errorf("updating book cover: %w", err)
+	}
+	err = checkAffectedRows(res, bookstore.NewNoResultError("book", err))
+	if err != nil {
+		return fmt.Errorf("updating book cover: %w", err)
+	}
+	return nil
+}
+
 // DeleteBook deletes the specified book using its ID
 func (s *Store) DeleteBook(ctx context.Context, bookID string) error {
 	if bookID == "" {

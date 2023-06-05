@@ -106,3 +106,5 @@ func (e *NonExistentIDError) Error() string {
 func (e *NonExistentIDError) Unwrap() error {
 	return e.err
 }
+
+var ErrInvalidFileType = errors.New("invalid file type provided")
