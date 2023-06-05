@@ -3,7 +3,6 @@ package rest
 import (
 	"context"
 	"io"
-	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -84,6 +83,4 @@ type coverStore interface {
 	StoreCover(ctx context.Context, bookID string, img io.ReadSeeker) error
 	RemoveCover(ctx context.Context, bookID string) error
 	ResolveCover(coverFile string) string
-	HandleCoverRequest(w http.ResponseWriter, r *http.Request)
-	GetCover(ctx context.Context, bookId string) (io.ReadCloser, error)
 }

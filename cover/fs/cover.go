@@ -14,14 +14,21 @@ import (
 	"github.com/thunder33345/bookstore/http/rest"
 )
 
+// Store acts as an image store
+// images are stored in file system, and the db maintains the filename
+// this version provides HandleCoverRequest as a web mount to handle serving the files
 type Store struct {
 	//storeDir is the root directory where images are stored
 	storeDir string
-	//mountPoint is the web location of where Store.ShowCover is mounted
+	//mountPoint is the web location of where Store.HandleCoverRequest is mounted
 	mountPoint string
-	db         dbStore
+	//db allows image store to update book's cover metadata
+	db dbStore
 }
 
+// NewStore creates a new image store
+// webMount should describe where Store.HandleCoverRequest is mounted, this is necessary for generating canonical URL
+// it should start with HTTP(s)://
 func NewStore(fileDir string, webMount string, db dbStore) (*Store, error) {
 	fileDir, err := filepath.Abs(fileDir)
 	if err != nil {
@@ -59,7 +66,7 @@ func (s *Store) StoreCover(ctx context.Context, bookID string, img io.ReadSeeker
 	return s.db.UpdateBookCover(ctx, bookID, resourceName)
 }
 
-// RemoveCover remove the stored cover file
+// RemoveCover remove the stored cover file and updates the db
 func (s *Store) RemoveCover(ctx context.Context, bookID string) error {
 	book, err := s.db.GetBook(ctx, bookID)
 	if err != nil {
@@ -75,7 +82,8 @@ func (s *Store) RemoveCover(ctx context.Context, bookID string) error {
 	return s.db.UpdateBookCover(ctx, bookID, "")
 }
 
-// ResolveCover turns a cover file into a URL
+// ResolveCover turns a cover file metadata from the database into a canonical URL
+// we need to know the mount point of HandleCoverRequest to do this
 func (s *Store) ResolveCover(coverFile string) string {
 	if coverFile == "" {
 		return ""
@@ -84,18 +92,19 @@ func (s *Store) ResolveCover(coverFile string) string {
 }
 
 // HandleCoverRequest is a http handler mounted to match ResolveCover to display the cover file
+// it expects the {image} param to be available from chi
 func (s *Store) HandleCoverRequest(w http.ResponseWriter, r *http.Request) {
 	fileName := chi.URLParam(r, "image")
 	if fileName == "" {
 		_ = render.Render(w, r, rest.ErrInvalidRequest(fmt.Errorf("no file name provided")))
 		return
 	}
-	fmt.Printf("filename: %s\n", fileName)
 
-	file, err := s.GetCoverFromResource(fileName)
+	file, err := os.Open(s.getPath(fileName))
 	if err != nil {
 		if os.IsNotExist(err) {
 			_ = render.Render(w, r, rest.ErrNotFound)
+			return
 		}
 		_ = render.Render(w, r, rest.ErrInvalidRequest(fmt.Errorf("failed opening file: %w", err)))
 		return
@@ -104,9 +113,10 @@ func (s *Store) HandleCoverRequest(w http.ResponseWriter, r *http.Request) {
 
 	buf, err := io.ReadAll(file)
 	if err != nil {
-		_ = render.Render(w, r, rest.ErrInvalidRequest(fmt.Errorf("failed reading file")))
+		_ = render.Render(w, r, rest.ErrInvalidRequest(fmt.Errorf("failed reading file: %w", err)))
 		return
 	}
+	//we get the content type necessary for browsers to display it properly via file extension
 	typ, err := extToType(fileName)
 	if err != nil {
 		_ = render.Render(w, r, rest.ErrInvalidRequest(fmt.Errorf("failed getting file type")))
@@ -118,24 +128,12 @@ func (s *Store) HandleCoverRequest(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (s *Store) GetCoverFromResource(resourceID string) (io.ReadCloser, error) {
-	file, err := os.Open(s.getPath(resourceID))
-	return file, err
-}
-
-func (s *Store) GetCover(ctx context.Context, bookId string) (io.ReadCloser, error) {
-	book, err := s.db.GetBook(ctx, bookId)
-	if err != nil {
-		return nil, err
-	}
-	file, err := os.Open(s.getPath(book.CoverURL))
-	return file, err
-}
-
+// getPath is a helper to join create path prefixed with storeDir
 func (s *Store) getPath(cover string) string {
 	return filepath.Join(s.storeDir, cover)
 }
 
+// dbStore is a minimal interface of psql.Store
 type dbStore interface {
 	GetBook(ctx context.Context, bookID string) (bookstore.Book, error)
 	UpdateBookCover(ctx context.Context, bookID string, coverFile string) error
@@ -165,6 +163,7 @@ func detectExt(file io.ReadSeeker) (string, error) {
 	return ext, nil
 }
 
+// typeToExt convert filetype into an extension
 func typeToExt(filetype string) (string, error) {
 	switch filetype {
 	case "image/jpeg":
@@ -176,6 +175,7 @@ func typeToExt(filetype string) (string, error) {
 	}
 }
 
+// extToType convert file extension back into content type
 func extToType(filename string) (string, error) {
 	ext := filepath.Ext(filename)
 	switch ext {
