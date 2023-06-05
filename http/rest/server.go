@@ -56,7 +56,7 @@ func (h *Handler) Mount(r chi.Router) {
 			r.Put("/", h.UpdateBook)
 			r.Delete("/", h.DeleteBook)
 			r.Put("/cover", h.UpdateBookCover)
-			r.Delete("/cover", h.DeleteBook)
+			r.Delete("/cover", h.DeleteBookCover)
 		})
 	})
 }
