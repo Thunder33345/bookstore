@@ -14,6 +14,7 @@ import (
 type Handler struct {
 	store             store
 	cover             coverStore
+	defaultListLimit  int
 	maxListLimit      int
 	ignoreInvalidIBSN bool
 }
@@ -21,9 +22,10 @@ type Handler struct {
 // NewHandler creates a new Handler with given parameters
 func NewHandler(store store, cover coverStore, options ...Option) *Handler {
 	h := Handler{
-		store:        store,
-		cover:        cover,
-		maxListLimit: 100,
+		store:            store,
+		cover:            cover,
+		defaultListLimit: 50,
+		maxListLimit:     100,
 	}
 	for _, option := range options {
 		h = option(h)
@@ -34,7 +36,7 @@ func NewHandler(store store, cover coverStore, options ...Option) *Handler {
 // Mount will mount the whole rest handlers onto the given chi router
 func (h *Handler) Mount(r chi.Router) {
 	r.Route("/genres", func(r chi.Router) {
-		r.With(h.PaginationUUIDMiddleware).Get("/", h.ListGenres)
+		r.With(h.PaginationLimitMiddleware, h.PaginationUUIDMiddleware).Get("/", h.ListGenres)
 		r.Post("/", h.CreateGenre)
 		r.With(UUIDCtx).Route("/{uuid}", func(r chi.Router) {
 			r.Get("/", h.GetGenre)
@@ -44,7 +46,7 @@ func (h *Handler) Mount(r chi.Router) {
 	})
 
 	r.Route("/authors", func(r chi.Router) {
-		r.With(h.PaginationUUIDMiddleware).Get("/", h.ListAuthors)
+		r.With(h.PaginationLimitMiddleware, h.PaginationUUIDMiddleware).Get("/", h.ListAuthors)
 		r.Post("/", h.CreateAuthor)
 		r.With(UUIDCtx).Route("/{uuid}", func(r chi.Router) {
 			r.Get("/", h.GetAuthor)
@@ -54,7 +56,7 @@ func (h *Handler) Mount(r chi.Router) {
 	})
 
 	r.Route("/books", func(r chi.Router) {
-		r.With(h.PaginationIBSNMiddleware).Get("/", h.ListBooks)
+		r.With(h.PaginationLimitMiddleware, h.PaginationIBSNMiddleware).Get("/", h.ListBooks)
 		r.With(ISBNCtx).Route("/{isbn}", func(r chi.Router) {
 			r.Post("/", h.CreateBook)
 			r.Get("/", h.GetBook)

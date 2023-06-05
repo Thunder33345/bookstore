@@ -12,6 +12,7 @@ import (
 	"github.com/moraes/isbn"
 )
 
+// ctxKey is an unexported type to prevent context key collisions
 type ctxKey string
 
 func (c ctxKey) String() string {
@@ -19,16 +20,15 @@ func (c ctxKey) String() string {
 }
 
 var ctxKeyLimit = ctxKey("page-limit")
-var ctxKeyAfter = ctxKey("page-after")
 
-func (h *Handler) PaginationUUIDMiddleware(next http.Handler) http.Handler {
+// PaginationLimitMiddleware populates the ctxKeyLimit for controlling listed elements in pagination
+func (h *Handler) PaginationLimitMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
-		limit := 50
+		limit := h.defaultListLimit
 
 		var err error
 		if lim := q.Get("limit"); lim != "" {
-
 			limit, err = strconv.Atoi(lim)
 			if err != nil {
 				_ = render.Render(w, r, ErrInvalidRequestParam("limit", err))
@@ -41,8 +41,18 @@ func (h *Handler) PaginationUUIDMiddleware(next http.Handler) http.Handler {
 		}
 
 		r = r.WithContext(context.WithValue(r.Context(), ctxKeyLimit, limit))
+		next.ServeHTTP(w, r)
+	})
+}
 
+var ctxKeyAfter = ctxKey("page-after")
+
+// PaginationUUIDMiddleware populates the ctxKeyAfter with a UUID
+func (h *Handler) PaginationUUIDMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
 		var afterID uuid.UUID
+		var err error
 		if aft := q.Get("after"); aft != "" {
 			afterID, err = uuid.Parse(aft)
 			if err != nil {
@@ -52,45 +62,27 @@ func (h *Handler) PaginationUUIDMiddleware(next http.Handler) http.Handler {
 		}
 
 		r = r.WithContext(context.WithValue(r.Context(), ctxKeyAfter, afterID))
-
 		next.ServeHTTP(w, r)
 	})
 }
 
+// PaginationIBSNMiddleware populates the ctxKeyAfter with a string
 func (h *Handler) PaginationIBSNMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
-		limit := 50
-
-		var err error
-		if lim := q.Get("limit"); lim != "" {
-
-			limit, err = strconv.Atoi(lim)
-			if err != nil {
-				_ = render.Render(w, r, ErrInvalidRequestParam("limit", err))
-				return
-			}
-			if limit > h.maxListLimit {
-				_ = render.Render(w, r, ErrInvalidRequestParam("limit", fmt.Errorf("invalid value %d", limit)))
-				return
-			}
-		}
-
-		r = r.WithContext(context.WithValue(r.Context(), ctxKeyLimit, limit))
-
 		var afterID string
 		if aft := q.Get("after"); aft != "" {
 			afterID = aft
 		}
 
 		r = r.WithContext(context.WithValue(r.Context(), ctxKeyAfter, afterID))
-
 		next.ServeHTTP(w, r)
 	})
 }
 
 var ctxUUIDKey = ctxKey("uuid")
 
+// UUIDCtx populates the UUID into context from url param, and perform validation
 func UUIDCtx(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var uid uuid.UUID
@@ -113,6 +105,7 @@ func UUIDCtx(next http.Handler) http.Handler {
 
 var ctxISBNKey = ctxKey("isbn")
 
+// ISBNCtx populates the ISBN into context from url param
 func ISBNCtx(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var id string
@@ -134,6 +127,8 @@ func ISBNCtx(next http.Handler) http.Handler {
 	})
 }
 
+// validateISBN validates ISBN upon book creation
+// h.ignoreInvalidIBSN allows ignoring validating ISBN checksum
 func (h *Handler) validateISBN(id string) (string, error) {
 	var err error
 	if idLen := len(id); idLen != 10 && idLen != 13 {
@@ -154,6 +149,7 @@ func (h *Handler) validateISBN(id string) (string, error) {
 	return id, err
 }
 
+// stringSliceToUUID is a utility function to convert a slice of string into a slice of uuid
 func stringSliceToUUID(ids []string) ([]uuid.UUID, error) {
 	if ids == nil || len(ids) == 0 {
 		return nil, nil
