@@ -77,6 +77,9 @@ func (s *Store) RemoveCover(ctx context.Context, bookID string) error {
 
 // ResolveCover turns a cover file into a URL
 func (s *Store) ResolveCover(coverFile string) string {
+	if coverFile == "" {
+		return ""
+	}
 	return s.mountPoint + coverFile
 }
 
@@ -91,6 +94,9 @@ func (s *Store) HandleCoverRequest(w http.ResponseWriter, r *http.Request) {
 
 	file, err := s.GetCoverFromResource(fileName)
 	if err != nil {
+		if os.IsNotExist(err) {
+			_ = render.Render(w, r, rest.ErrNotFound)
+		}
 		_ = render.Render(w, r, rest.ErrInvalidRequest(fmt.Errorf("failed opening file: %w", err)))
 		return
 	}
