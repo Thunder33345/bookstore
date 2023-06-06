@@ -12,9 +12,9 @@ func WithMaxListing(limit int) Option {
 }
 
 // WithIgnoreInvalidISBN disable ISBN validation when creating books
-func WithIgnoreInvalidISBN() Option {
+func WithIgnoreInvalidISBN(b bool) Option {
 	return func(h Handler) Handler {
-		h.ignoreInvalidIBSN = true
+		h.ignoreInvalidIBSN = b
 		return h
 	}
 }
