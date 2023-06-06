@@ -38,7 +38,7 @@ CREATE UNIQUE INDEX index_book ON book USING btree (created_at ASC);
 -- Using user seems to be not recommended
 CREATE TABLE account
 (
-    id            uuid        NOT NULL,
+    id            uuid        NOT NULL PRIMARY KEY DEFAULT uuid_generate_v4(),
     name          text        NOT NULL CHECK (name <> ''),
     email         text UNIQUE NOT NULL CHECK (email <> ''),
     password_hash text        NOT NULL CHECK (password_hash <> ''),
@@ -54,6 +54,7 @@ create or replace function raise_error_tz(text) returns timestamptz as
 $$
 begin
     raise exception '%', $1;
+    -- noinspection SqlUnreachable
     return '1970-01-01'::timestamptz;
 end;
 $$ language plpgsql;
