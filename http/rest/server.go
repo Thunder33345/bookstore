@@ -14,6 +14,7 @@ import (
 type Handler struct {
 	store             store
 	cover             coverStore
+	auth              authService
 	defaultListLimit  int
 	maxListLimit      int
 	ignoreInvalidIBSN bool
@@ -66,6 +67,18 @@ func (h *Handler) Mount(r chi.Router) {
 			r.Delete("/cover", h.DeleteBookCover)
 		})
 	})
+
+	r.Route("/users", func(r chi.Router) {
+		r.With(h.PaginationLimitMiddleware, h.PaginationUUIDMiddleware).Get("/", h.ListUsers)
+		r.Post("/", h.CreateUser)
+		r.With(UUIDCtx).Route("/{uuid}", func(r chi.Router) {
+			r.Get("/", h.GetUser)
+			r.Put("/", h.UpdateUser)
+			r.Delete("/", h.DeleteUser)
+			r.Put("/password", h.UpdateUserPassword)
+			r.Delete("/password", h.DeleteUserSessions)
+		})
+	})
 }
 
 // store is an interface of the DB
@@ -87,6 +100,12 @@ type store interface {
 	ListBooks(ctx context.Context, limit int, after string, genresId []uuid.UUID, authorsId []uuid.UUID, searchTitle string) ([]bookstore.Book, error)
 	UpdateBook(ctx context.Context, book bookstore.Book) error
 	DeleteBook(ctx context.Context, bookID string) error
+	CreateAccount(ctx context.Context, account bookstore.Account) (bookstore.Account, error)
+	GetAccount(ctx context.Context, accountID uuid.UUID) (bookstore.Account, error)
+	GetAccountByEmail(ctx context.Context, email string) (bookstore.Account, error)
+	ListAccounts(ctx context.Context, limit int, after uuid.UUID) ([]bookstore.Account, error)
+	UpdateAccount(ctx context.Context, account bookstore.Account) error
+	DeleteAccount(ctx context.Context, accountID uuid.UUID) error
 }
 
 // coverStore is a minimal interface of fs.Store
@@ -94,4 +113,13 @@ type coverStore interface {
 	StoreCover(ctx context.Context, bookID string, img io.ReadSeeker) error
 	RemoveCover(ctx context.Context, bookID string) error
 	ResolveCover(coverFile string) string
+}
+
+type authService interface {
+	Hash(password string) (string, error)
+	Validate(hash string, password string) (bool, error)
+	GetSession(token string) (bookstore.Session, bool)
+	CreateSession(account bookstore.Account) string
+	DeleteSession(token string)
+	DeleteSessionFor(user uuid.UUID)
 }
