@@ -49,14 +49,6 @@ CREATE TABLE account
 );
 CREATE UNIQUE INDEX index_account ON account USING btree (created_at ASC);
 
-CREATE TABLE sessions
-(
-    account_id uuid                    NOT NULL,
-    token      text PRIMARY KEY UNIQUE NOT NULL CHECK (token <> ''),
-    created_at timestamptz DEFAULT now(),
-    CONSTRAINT fk_account FOREIGN KEY (account_id) REFERENCES account (id) ON DELETE CASCADE
-);
-
 -- create a function to raise errors, this is used if our sub-query fails
 create or replace function raise_error_tz(text) returns timestamptz as
 $$
