@@ -10,7 +10,6 @@ import (
 	"github.com/go-chi/render"
 	"github.com/google/uuid"
 	"github.com/thunder33345/bookstore"
-	"github.com/thunder33345/bookstore/auth"
 )
 
 // CreateAccount handles signup
@@ -41,7 +40,7 @@ func (h *Handler) CreateAccount(w http.ResponseWriter, r *http.Request) {
 
 // GetAccount returns account info for current session
 func (h *Handler) GetAccount(w http.ResponseWriter, r *http.Request) {
-	ses, ok := auth.GetSession(r.Context())
+	ses, ok := GetSession(r.Context())
 	if !ok {
 		//we try to get the session from auth,
 		//but if we didn't get that, it means the account isn't logged in
@@ -64,7 +63,7 @@ func (h *Handler) GetAccount(w http.ResponseWriter, r *http.Request) {
 
 // UpdateAccount updates current account's data
 func (h *Handler) UpdateAccount(w http.ResponseWriter, r *http.Request) {
-	ses, ok := auth.GetSession(r.Context())
+	ses, ok := GetSession(r.Context())
 	if !ok {
 		_ = render.Render(w, r, ErrUnauthorized)
 		return
@@ -92,7 +91,7 @@ func (h *Handler) UpdateAccount(w http.ResponseWriter, r *http.Request) {
 // UpdateAccountPassword allows user to update their account's password
 // this performs old password validation, unlike UpdateUser
 func (h *Handler) UpdateAccountPassword(w http.ResponseWriter, r *http.Request) {
-	ses, ok := auth.GetSession(r.Context())
+	ses, ok := GetSession(r.Context())
 	if !ok {
 		_ = render.Render(w, r, ErrUnauthorized)
 		return
@@ -165,7 +164,7 @@ func (h *Handler) CreateAccountSession(w http.ResponseWriter, r *http.Request) {
 // DeleteAccountSession removes current active session token(aka log out)
 // using parameter all=true will log out all active session for current user
 func (h *Handler) DeleteAccountSession(w http.ResponseWriter, r *http.Request) {
-	ses, tok, ok := auth.GetSessionAndToken(r.Context())
+	ses, tok, ok := GetSessionAndToken(r.Context())
 	if !ok {
 		_ = render.Render(w, r, ErrUnauthorized)
 		return
