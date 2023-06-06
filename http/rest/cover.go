@@ -27,6 +27,7 @@ func (h *Handler) UpdateBookCover(w http.ResponseWriter, r *http.Request) {
 		_ = render.Render(w, r, ErrQueryResponse(err))
 		return
 	}
+	render.Status(r, http.StatusNoContent)
 }
 
 func (h *Handler) DeleteBookCover(w http.ResponseWriter, r *http.Request) {
