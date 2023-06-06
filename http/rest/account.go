@@ -33,9 +33,10 @@ func (h *Handler) CreateAccount(w http.ResponseWriter, r *http.Request) {
 		_ = render.Render(w, r, ErrQueryResponse(err))
 		return
 	}
+	tok := h.auth.CreateSession(created)
 
 	render.Status(r, http.StatusOK)
-	_ = render.Render(w, r, NewAccountResponse(created))
+	_ = render.Render(w, r, NewSessionCreateResponse(tok, created))
 }
 
 // GetAccount returns account info for current session
