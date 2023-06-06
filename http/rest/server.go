@@ -21,10 +21,11 @@ type Handler struct {
 }
 
 // NewHandler creates a new Handler with given parameters
-func NewHandler(store store, cover coverStore, options ...Option) *Handler {
+func NewHandler(store store, cover coverStore, auth authService, options ...Option) *Handler {
 	h := Handler{
 		store:            store,
 		cover:            cover,
+		auth:             auth,
 		defaultListLimit: 50,
 		maxListLimit:     100,
 	}
@@ -36,59 +37,68 @@ func NewHandler(store store, cover coverStore, options ...Option) *Handler {
 
 // Mount will mount the whole rest handlers onto the given chi router
 func (h *Handler) Mount(r chi.Router) {
-	r.Route("/genres", func(r chi.Router) {
-		r.With(h.PaginationLimitMiddleware, h.PaginationUUIDMiddleware).Get("/", h.ListGenres)
-		r.Post("/", h.CreateGenre)
-		r.With(UUIDCtx).Route("/{uuid}", func(r chi.Router) {
-			r.Get("/", h.GetGenre)
-			r.Put("/", h.UpdateGenre)
-			r.Delete("/", h.DeleteGenre)
+	r.With(h.MiddlewareAuthenticatedOnly).Group(func(r chi.Router) {
+		r.Route("/genres", func(r chi.Router) {
+			r.With(h.PaginationLimitMiddleware, h.PaginationUUIDMiddleware).Get("/", h.ListGenres)
+			r.With(h.MiddlewareAdminOnly).Post("/", h.CreateGenre)
+			r.With(UUIDCtx).Route("/{uuid}", func(r chi.Router) {
+				r.Get("/", h.GetGenre)
+				r.With(h.MiddlewareAdminOnly).Put("/", h.UpdateGenre)
+				r.With(h.MiddlewareAdminOnly).Delete("/", h.DeleteGenre)
+			})
 		})
-	})
 
-	r.Route("/authors", func(r chi.Router) {
-		r.With(h.PaginationLimitMiddleware, h.PaginationUUIDMiddleware).Get("/", h.ListAuthors)
-		r.Post("/", h.CreateAuthor)
-		r.With(UUIDCtx).Route("/{uuid}", func(r chi.Router) {
-			r.Get("/", h.GetAuthor)
-			r.Put("/", h.UpdateAuthor)
-			r.Delete("/", h.DeleteAuthor)
+		r.Route("/authors", func(r chi.Router) {
+			r.With(h.PaginationLimitMiddleware, h.PaginationUUIDMiddleware).Get("/", h.ListAuthors)
+			r.Group(func(r chi.Router) {
+				r.With(h.MiddlewareAdminOnly).Post("/", h.CreateAuthor)
+				r.With(UUIDCtx).Route("/{uuid}", func(r chi.Router) {
+					r.Get("/", h.GetAuthor)
+					r.With(h.MiddlewareAdminOnly).Put("/", h.UpdateAuthor)
+					r.With(h.MiddlewareAdminOnly).Delete("/", h.DeleteAuthor)
+				})
+			})
 		})
-	})
 
-	r.Route("/books", func(r chi.Router) {
-		r.With(h.PaginationLimitMiddleware, h.PaginationIBSNMiddleware).Get("/", h.ListBooks)
-		r.With(ISBNCtx).Route("/{isbn}", func(r chi.Router) {
-			r.Post("/", h.CreateBook)
-			r.Get("/", h.GetBook)
-			r.Put("/", h.UpdateBook)
-			r.Delete("/", h.DeleteBook)
-			r.Put("/cover", h.UpdateBookCover)
-			r.Delete("/cover", h.DeleteBookCover)
+		r.Route("/books", func(r chi.Router) {
+			r.With(h.PaginationLimitMiddleware, h.PaginationIBSNMiddleware).Get("/", h.ListBooks)
+			r.With(ISBNCtx).Route("/{isbn}", func(r chi.Router) {
+				r.Get("/", h.GetBook)
+				r.With(h.MiddlewareAdminOnly).Group(func(r chi.Router) {
+					r.Post("/", h.CreateBook)
+					r.Put("/", h.UpdateBook)
+					r.Delete("/", h.DeleteBook)
+					r.Put("/cover", h.UpdateBookCover)
+					r.Delete("/cover", h.DeleteBookCover)
+				})
+			})
 		})
-	})
 
-	r.Route("/users", func(r chi.Router) {
-		r.With(h.PaginationLimitMiddleware, h.PaginationUUIDMiddleware).Get("/", h.ListUsers)
-		r.Post("/", h.CreateUser)
-		r.With(UUIDCtx).Route("/{uuid}", func(r chi.Router) {
-			r.Get("/", h.GetUser)
-			r.Put("/", h.UpdateUser)
-			r.Delete("/", h.DeleteUser)
-			r.Post("/password", h.UpdateUserPassword)
-			r.Delete("/password", h.DeleteUserSessions)
+		r.With(h.MiddlewareAdminOnly).Route("/users", func(r chi.Router) {
+			r.With(h.PaginationLimitMiddleware, h.PaginationUUIDMiddleware).Get("/", h.ListUsers)
+			r.Post("/", h.CreateUser)
+			r.With(UUIDCtx).Route("/{uuid}", func(r chi.Router) {
+				r.Get("/", h.GetUser)
+				r.Put("/", h.UpdateUser)
+				r.Delete("/", h.DeleteUser)
+				r.Post("/password", h.UpdateUserPassword)
+				r.Delete("/password", h.DeleteUserSessions)
+				r.Delete("/sessions", h.DeleteUserSessions)
+			})
 		})
 	})
 
 	//this allows user to manage the currently authenticated account
 	r.Route("/account", func(r chi.Router) {
 		r.Post("/", h.CreateAccount)
-		r.Get("/", h.GetAccount)
-		r.Put("/", h.UpdateAccount)
-		r.Post("/", h.UpdateAccountPassword)
+		r.With(h.MiddlewareAuthenticatedOnly).Group(func(r chi.Router) {
+			r.Get("/", h.GetAccount)
+			r.Put("/", h.UpdateAccount)
+			r.Post("/password", h.UpdateAccountPassword)
+		})
 		r.Route("/sessions", func(r chi.Router) {
 			r.Post("/", h.CreateAccountSession)
-			r.Delete("/", h.DeleteAccountSession)
+			r.With(h.MiddlewareAuthenticatedOnly).Delete("/", h.DeleteAccountSession)
 		})
 	})
 }
