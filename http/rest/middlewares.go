@@ -155,7 +155,7 @@ func (h *Handler) MiddlewareAdminOnly(next http.Handler) http.Handler {
 			return
 		}
 		if account.Admin == false {
-			_ = render.Render(w, r, ErrUnauthorized)
+			_ = render.Render(w, r, ErrForbidden)
 			return
 		}
 		next.ServeHTTP(w, r)

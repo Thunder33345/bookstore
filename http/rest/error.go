@@ -129,3 +129,4 @@ func ErrRender(err error) render.Renderer {
 var ErrNotFound = &ErrResponse{HTTPStatusCode: 404, MessageText: "Resource not found."}
 
 var ErrUnauthorized = &ErrResponse{HTTPStatusCode: http.StatusUnauthorized, MessageText: "Unauthorized."}
+var ErrForbidden = &ErrResponse{HTTPStatusCode: http.StatusForbidden, MessageText: "Forbidden."}
