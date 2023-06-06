@@ -15,6 +15,14 @@ type Auth struct {
 	pwCost int
 }
 
+func NewAuth(db db, pwCost int) *Auth {
+	return &Auth{
+		ses:    xsync.MapOf[string, bookstore.Session]{},
+		db:     db,
+		pwCost: pwCost,
+	}
+}
+
 func (a *Auth) Hash(password string) (string, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), a.pwCost)
 	return string(hash), err
