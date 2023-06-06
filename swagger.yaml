@@ -1,0 +1,1095 @@
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: Bookstore API
+  description: >
+    Bookstore API documents.
+    Note that manage user and all write operation requires admin.
+  contact: {}
+
+servers:
+  - url: https://example.io/v1
+
+components:
+  securitySchemes:
+    bearerAuth:
+      description: Session token obtained via /login
+      type: http
+      scheme: bearer
+      bearerFormat: Session token
+  schemas:
+    User:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+        email:
+          type: string
+        admin:
+          type: boolean
+          description: admin users can edit records
+        created_at:
+          type: string
+          readOnly: true
+        updated_at:
+          type: string
+          readOnly: true
+
+    Author:
+      type: object
+      required:
+        - name
+      properties:
+        id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+        created_at:
+          type: string
+          readOnly: true
+        updated_at:
+          type: string
+          readOnly: true
+
+    Genre:
+      type: object
+      required:
+        - name
+      properties:
+        id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+        created_at:
+          type: string
+          readOnly: true
+        updated_at:
+          type: string
+          readOnly: true
+
+    Book:
+      type: object
+      required:
+        - title
+        - author_id
+        - genre_id
+        - isbn
+        - published_year
+        - fiction
+      properties:
+        isbn:
+          type: integer
+        title:
+          type: string
+        author_id:
+          type: string
+        genre_id:
+          type: string
+        published_year:
+          type: integer
+        fiction:
+          type: boolean
+        cover_url:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          readOnly: true
+        updated_at:
+          type: string
+          readOnly: true
+
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+        error:
+          type: string
+
+  responses:
+    UnauthorizedError:
+      description: Access token is missing or invalid
+    ForbiddenError:
+      description: Missing permission
+
+  parameters:
+    offsetParam:
+      in: query
+      name: after
+      required: false
+      schema:
+        type: string
+      description: The uuid/key of the last received item for paging.
+    limitParam:
+      in: query
+      name: limit
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+      description: The numbers of items to return.
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: account
+    description: Manage the current account
+  - name: users
+    description: Manage users
+  - name: genres
+    description: Manage genres
+  - name: authors
+    description: Manage authors
+  - name: books
+    description: Manage books
+
+paths:
+  /account:
+    post:
+      operationId: createAccount
+      summary: Create new account
+      description: "Creates a new account."
+      tags:
+        - account
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - name
+                - password
+              properties:
+                email:
+                  type: string
+                name:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: "Successfully created a new account."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  authorization:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          description: "Validation error"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    get:
+      operationId: showAccount
+      summary: Show current account
+      description: Returns the currently authenticated user.
+      tags:
+        - account
+      parameters: []
+      responses:
+        '200':
+          description: Successfully returned the current users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    put:
+      operationId: updateAccount
+      summary: Update account
+      description: "Updates the current the currently authenticated user's data by replacing with new data"
+      tags:
+        - account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        '204':
+          description: Successfully updated the current user.
+        '400':
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  /account/password:
+    post:
+      operationId: updatePassword
+      summary: Update password
+      description: "Updates the currently account's password, if old password matches."
+      tags:
+        - account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - old_password
+                - new_password
+              properties:
+                old_password:
+                  type: string
+                new_password:
+                  type: string
+      responses:
+        '204':
+          description: "Successfully updated the current user's password."
+        '400':
+          description: "Validation error: incorrect old password or invalid new password"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  /account/sessions:
+    post:
+      operationId: createSession
+      summary: Login
+      description: "Login with the user's email and password to obtain session token."
+      security: []
+      tags:
+        - account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: "Successfully authenticated, producing a authorization token."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  authorization:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          description: "Invalid credentials"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      operationId: deleteSession
+      summary: Logout
+      description: "Invalidates the current session token."
+      parameters:
+        - in: query
+          name: all
+          schema:
+            type: boolean
+            default: false
+          required: false
+          description: Invalidates all active sessions for the current user.
+      tags:
+        - account
+      responses:
+        '204':
+          description: "Session token successfully invalidated."
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  #Users
+  /users:
+    get:
+      operationId: getUsers
+      summary: List all users
+      description: Returns a list of users
+      tags:
+        - users
+      parameters:
+        - $ref: '#/components/parameters/offsetParam'
+        - $ref: '#/components/parameters/limitParam'
+      responses:
+        '200':
+          description: Successfully returned a list of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    post:
+      operationId: createUser
+      summary: Create a user
+      description: Create a new user
+      tags:
+        - users
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - email
+                - password
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+
+      responses:
+        '400':
+          description: "Validation error"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '200':
+          description: Successfully created a new user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+  /users/{userId}:
+    get:
+      operationId: showUser
+      summary: Show user
+      description: Returns the specified user by user ID
+      tags:
+        - users
+      parameters:
+        - in: path
+          name: userId
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: Returned the specified user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Failed to find the specified user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      operationId: updateUser
+      summary: Update user
+      description: Updates the specified user
+      tags:
+        - users
+      parameters:
+        - in: path
+          name: userId
+          schema:
+            type: string
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        '200':
+          description: Returns the updated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Failed to find the specified user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      operationId: deleteUser
+      summary: Delete user
+      description: Deletes the specified user
+      tags:
+        - users
+      parameters:
+        - in: path
+          name: userId
+          schema:
+            type: string
+          required: true
+      responses:
+        '204':
+          description: User has been successfully deleted
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: The specified user does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /users/{userId}/password:
+    put:
+      operationId: updateUserPassword
+      summary: "Update user password"
+      description: "Updates the specified user's password"
+      tags:
+        - users
+      parameters:
+        - in: path
+          name: userId
+          schema:
+            type: string
+          required: true
+          description: The ID of the user to update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - password
+              properties:
+                password:
+                  type: string
+      responses:
+        '200':
+          description: "Successfully updated user's password"
+        '400':
+          description: Invalid password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Failed to find the specified user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /users/{userId}/sessions:
+    delete:
+      operationId: deleteSessions
+      summary: Invalidate all sessions
+      description: "Invalidates all active session token for user, forcing the user to reauthenticate."
+      parameters:
+        - in: path
+          name: userId
+          schema:
+            type: string
+          required: true
+          description: The ID of the user to update
+      tags:
+        - users
+      responses:
+        '204':
+          description: "Session tokens successfully invalidated."
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Failed to find the specified user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  #Genre resources
+  /genres:
+    get:
+      operationId: getGenres
+      summary: List all genres
+      description: Returns a list of genres
+      tags:
+        - genres
+      parameters:
+        - $ref: '#/components/parameters/offsetParam'
+        - $ref: '#/components/parameters/limitParam'
+      responses:
+        '200':
+          description: Successfully returned a list of genres
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Genre'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Failed to find the specified genre
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      operationId: createGenre
+      summary: Create a genre
+      description: Create a new genere
+      tags:
+        - genres
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Genre'
+      responses:
+        '200':
+          description: Successfully created a genres
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Genre'
+        '400':
+          description: "Validation error"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+  /genres/{genreId}:
+    get:
+      operationId: showGenre
+      summary: Show genre
+      description: Returns the specified genre by genre ID
+      tags:
+        - genres
+      parameters:
+        - in: path
+          name: genreId
+          schema:
+            type: string
+          required: true
+          description: The ID of the genre to get
+      responses:
+        '200':
+          description: Returned the specified genre
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Genre'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Failed to find the specified genre
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      operationId: updateGenre
+      summary: Update genre
+      description: Update the specified genre by genre ID
+      tags:
+        - genres
+      parameters:
+        - in: path
+          name: genreId
+          schema:
+            type: string
+          required: true
+          description: The ID of the genre to update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Genre'
+      responses:
+        '204':
+          description: Successfully updated the specified genre
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Failed to find the specified genre
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      operationId: deleteGenre
+      summary: Delete genre
+      description: Delete the specified genre by genre ID
+      tags:
+        - genres
+      parameters:
+        - in: path
+          name: genreId
+          schema:
+            type: string
+          required: true
+          description: The ID of the genre to delete
+      responses:
+        '204':
+          description: Successfully deleted the specified genre
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: The specified genre does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: "The specified genre cannot be deleted because it is linked to other books"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  # Author resources
+  /authors:
+    get:
+      operationId: getAuthors
+      summary: List all authors
+      description: Returns a list of authors
+      tags:
+        - authors
+      parameters:
+        - $ref: '#/components/parameters/offsetParam'
+        - $ref: '#/components/parameters/limitParam'
+      responses:
+        '200':
+          description: Successfully returned a list of authors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Author'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    post:
+      operationId: createAuthor
+      summary: Create an author
+      description: Create a new author
+      tags:
+        - authors
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Author'
+      responses:
+        '200':
+          description: Successfully created an authors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Author'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+  /authors/{authorId}:
+    get:
+      operationId: showAuthor
+      summary: Show author
+      description: Returns the specified author by author ID
+      tags:
+        - authors
+      parameters:
+        - in: path
+          name: authorId
+          schema:
+            type: string
+          required: true
+          description: The ID of the author to show
+      responses:
+        '200':
+          description: Returned the specified author
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Author'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Failed to find the specified author
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      operationId: updateAuthor
+      summary: Update author
+      description: Update the specified author by author ID
+      tags:
+        - authors
+      parameters:
+        - in: path
+          name: authorId
+          schema:
+            type: string
+          required: true
+          description: The ID of the author to update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Author'
+      responses:
+        '204':
+          description: Successfully updated the specified author
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Failed to find the specified author
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      operationId: deleteAuthor
+      summary: Delete author
+      description: Delete the specified author by author ID
+      tags:
+        - authors
+      parameters:
+        - in: path
+          name: authorId
+          schema:
+            type: string
+          required: true
+          description: The ID of the author to delete
+      responses:
+        '204':
+          description: Successfully deleted the specified author
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: The specified genre does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: "The specified genre cannot be deleted because it is linked to other books"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  # book resources
+  /books:
+    get:
+      operationId: getBooks
+      summary: List all books
+      description: Returns a list of books
+      tags:
+        - books
+      parameters:
+        - $ref: '#/components/parameters/offsetParam'
+        - $ref: '#/components/parameters/limitParam'
+        - in: query
+          name: genre
+          description: Only returning books containing one of the requested genres ids
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+        - in: query
+          name: author
+          description: Only returning books containing one of the requested authors ids
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+        - in: query
+          name: name
+          description: Fuzzy search on book names
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successfully returned a list of books
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Book'
+        '204':
+          description: No content(end of pagination, or filter with no results)
+        '400':
+          description: Bad request, invalid filters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  /books/{isbn}:
+    get:
+      operationId: showBook
+      summary: Show book
+      description: Returns the specified book by book ID
+      tags:
+        - books
+      parameters:
+        - in: path
+          name: isbn
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: Returned the specified book
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+        '404':
+          description: Failed to find the specified book
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+    post:
+      operationId: createBook
+      summary: Create a book
+      description: Create a new book
+      tags:
+        - books
+      parameters:
+        - in: path
+          name: isbn
+          schema:
+            type: string
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Book'
+      responses:
+        '204':
+          description: Successfully created a book
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+    put:
+      operationId: updateBook
+      summary: Update book
+      description: Update the specified book by book ID
+      tags:
+        - books
+      parameters:
+        - in: path
+          name: isbn
+          schema:
+            type: string
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Book'
+      responses:
+        '204':
+          description: Successfully updated the specified book
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Failed to find the specified book
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+    delete:
+      operationId: deleteBook
+      summary: Delete book
+      description: Delete the specified book by book ID
+      tags:
+        - books
+      parameters:
+        - in: path
+          name: isbn
+          schema:
+            type: string
+          required: true
+      responses:
+        '204':
+          description: Successfully deleted the specified book
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: The specified book does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /books/{isbn}/cover:
+    put:
+      operationId: updateBookCover
+      summary: Update book cover
+      description: Update the specified book cover image by book ID
+      tags:
+        - books
+      parameters:
+        - in: path
+          name: isbn
+          schema:
+            type: string
+          required: true
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+      responses:
+        '204':
+          description: Successfully updated the specified book cover
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Failed to find the specified book
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      operationId: deleteBookCover
+      summary: Delete book cover
+      description: Delete the specified book by book ID
+      tags:
+        - books
+      parameters:
+        - in: path
+          name: isbn
+          schema:
+            type: string
+          required: true
+      responses:
+        '204':
+          description: Successfully deleted the specified book cover
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Failed to find the specified book
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
