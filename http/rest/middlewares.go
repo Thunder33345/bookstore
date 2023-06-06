@@ -174,13 +174,13 @@ func (h *Handler) populateSession(r *http.Request) (*http.Request, bookstore.Ses
 
 	ah := r.Header.Get("Authorization")
 	if !strings.HasPrefix(ah, "Bearer ") {
-		return nil, bookstore.Session{}, ErrInvalidCredentials
+		return r, bookstore.Session{}, ErrInvalidCredentials
 	}
 	ah = strings.TrimLeft(ah, "Bearer ")
 
 	account, ok := h.auth.GetSession(ah)
 	if !ok {
-		return nil, bookstore.Session{}, ErrInvalidCredentials
+		return r, bookstore.Session{}, ErrInvalidCredentials
 	}
 	r = r.WithContext(context.WithValue(r.Context(), ctxKey("user"), account))
 	r = r.WithContext(context.WithValue(r.Context(), ctxKey("token"), ah))
