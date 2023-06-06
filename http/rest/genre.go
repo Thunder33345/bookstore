@@ -31,9 +31,6 @@ func (h *Handler) CreateGenre(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetGenre(w http.ResponseWriter, r *http.Request) {
 	id := r.Context().Value(ctxUUIDKey).(uuid.UUID)
-	if id == uuid.Nil {
-		return
-	}
 
 	genre, err := h.store.GetGenre(r.Context(), id)
 

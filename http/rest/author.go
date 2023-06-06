@@ -31,9 +31,6 @@ func (h *Handler) CreateAuthor(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetAuthor(w http.ResponseWriter, r *http.Request) {
 	id := r.Context().Value(ctxUUIDKey).(uuid.UUID)
-	if id == uuid.Nil {
-		return
-	}
 
 	author, err := h.store.GetAuthor(r.Context(), id)
 
