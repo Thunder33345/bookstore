@@ -2,14 +2,17 @@ package rest
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/google/uuid"
 	"github.com/moraes/isbn"
+	"github.com/thunder33345/bookstore"
 )
 
 // ctxKey is an unexported type to prevent context key collisions
@@ -125,6 +128,79 @@ func ISBNCtx(next http.Handler) http.Handler {
 		ctx := context.WithValue(r.Context(), ctxISBNKey, id)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+// MiddlewareAuthenticatedOnly is a middleware to enforce authentication
+func (h *Handler) MiddlewareAuthenticatedOnly(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		//try to populate the session into context
+		//so other handlers can also use them
+		r, _, err := h.populateSession(r)
+		if err != nil {
+			_ = render.Render(w, r, ErrUnauthorized)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// MiddlewareAdminOnly is a middleware to enforce admin only
+func (h *Handler) MiddlewareAdminOnly(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		//try to populate the session into context
+		//so other handlers can also use them
+		r, account, err := h.populateSession(r)
+		if err != nil {
+			_ = render.Render(w, r, ErrUnauthorized)
+			return
+		}
+		if account.Admin == false {
+			_ = render.Render(w, r, ErrUnauthorized)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+var ErrInvalidCredentials = errors.New("invalid credentials")
+
+// populateSession tries to populate session data into context using header
+func (h *Handler) populateSession(r *http.Request) (*http.Request, bookstore.Session, error) {
+	//if it's already populated, we skip it
+	//this could happen if middlewares got chained
+	if ses, ok := GetSession(r.Context()); ok {
+		return r, ses, nil
+	}
+
+	ah := r.Header.Get("Authorization")
+	if !strings.HasPrefix(ah, "Bearer ") {
+		return nil, bookstore.Session{}, ErrInvalidCredentials
+	}
+	ah = strings.TrimLeft(ah, "Bearer ")
+
+	account, ok := h.auth.GetSession(ah)
+	if !ok {
+		return nil, bookstore.Session{}, ErrInvalidCredentials
+	}
+	r = r.WithContext(context.WithValue(r.Context(), ctxKey("user"), account))
+	r = r.WithContext(context.WithValue(r.Context(), ctxKey("token"), ah))
+	return r, account, nil
+}
+
+func GetSession(ctx context.Context) (bookstore.Session, bool) {
+	ses, ok := ctx.Value(ctxKey("user")).(bookstore.Session)
+	return ses, ok
+}
+
+func GetSessionToken(ctx context.Context) (string, bool) {
+	tok, ok := ctx.Value(ctxKey("token")).(string)
+	return tok, ok
+}
+
+func GetSessionAndToken(ctx context.Context) (bookstore.Session, string, bool) {
+	ses, okU := ctx.Value(ctxKey("user")).(bookstore.Session)
+	tok, okT := ctx.Value(ctxKey("token")).(string)
+	return ses, tok, okU && okT
 }
 
 // validateISBN validates ISBN upon book creation
