@@ -32,3 +32,7 @@ Args:
 - `--debug-routes`: makes the app mount an unprotected route to manage users on `/api/v1/debug/users` for debugging,
   allows you to give yourself admin without the DB
 - `--debug-isbn`: makes the app ignore ISBN checksum
+
+Environment:
+
+Postgres Server, require extension `uuid-ossp` and `pg_trgm`
