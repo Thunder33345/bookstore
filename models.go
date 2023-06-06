@@ -39,8 +39,8 @@ type Account struct {
 	ID           uuid.UUID `json:"ID"`
 	Name         string    `json:"name"`
 	Email        string    `json:"email"`
-	Admin        bool      `json:"admin"`
-	PasswordHash string    `json:"password,omitempty"`
+	Admin        bool      `json:"admin" db:"is_admin"`
+	PasswordHash string    `json:"password,omitempty" db:"password_hash"`
 
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
