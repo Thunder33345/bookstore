@@ -40,16 +40,14 @@ type Account struct {
 	Name         string    `json:"name"`
 	Email        string    `json:"email"`
 	Admin        bool      `json:"admin"`
-	PasswordHash string    `json:"-"`
+	PasswordHash string    `json:"password,omitempty"`
 
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
 
+// Session embeds Account
+// mostly for future proofing and distinction
 type Session struct {
-	ID     uuid.UUID
-	UserID uuid.UUID
-	Token  string
-
-	CreatedAt time.Time `db:"created_at"`
+	Account
 }
