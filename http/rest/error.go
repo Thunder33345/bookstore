@@ -9,7 +9,7 @@ import (
 	"github.com/thunder33345/bookstore"
 )
 
-// ErrResponse is the response that get sent when an error occours
+// ErrResponse is the response that get sent when an error occurs
 type ErrResponse struct {
 	//Err is for internal logic handling
 	Err error `json:"-"`
@@ -22,7 +22,7 @@ type ErrResponse struct {
 	ErrorText string `json:"error,omitempty"`
 }
 
-func (e *ErrResponse) Render(w http.ResponseWriter, r *http.Request) error {
+func (e *ErrResponse) Render(_ http.ResponseWriter, r *http.Request) error {
 	render.Status(r, e.HTTPStatusCode)
 	return nil
 }
@@ -127,3 +127,5 @@ func ErrRender(err error) render.Renderer {
 }
 
 var ErrNotFound = &ErrResponse{HTTPStatusCode: 404, MessageText: "Resource not found."}
+
+var ErrUnauthorized = &ErrResponse{HTTPStatusCode: http.StatusUnauthorized, MessageText: "Unauthorized."}

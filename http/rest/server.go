@@ -75,8 +75,20 @@ func (h *Handler) Mount(r chi.Router) {
 			r.Get("/", h.GetUser)
 			r.Put("/", h.UpdateUser)
 			r.Delete("/", h.DeleteUser)
-			r.Put("/password", h.UpdateUserPassword)
+			r.Post("/password", h.UpdateUserPassword)
 			r.Delete("/password", h.DeleteUserSessions)
+		})
+	})
+
+	//this allows user to manage the currently authenticated account
+	r.Route("/account", func(r chi.Router) {
+		r.Post("/", h.CreateAccount)
+		r.Get("/", h.GetAccount)
+		r.Put("/", h.UpdateAccount)
+		r.Post("/", h.UpdateAccountPassword)
+		r.Route("/sessions", func(r chi.Router) {
+			r.Post("/", h.CreateAccountSession)
+			r.Delete("/", h.DeleteAccountSession)
 		})
 	})
 }
