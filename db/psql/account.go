@@ -86,11 +86,39 @@ func (s *Store) UpdateAccount(ctx context.Context, account bookstore.Account) er
 	var err error
 	if account.PasswordHash == "" {
 		//if password hash is empty, we don't update it
-		res, err = s.db.ExecContext(ctx, `UPDATE account SET name = $1,email = $2,is_admin = $4  WHERE id = $2`,
+		res, err = s.db.ExecContext(ctx, `UPDATE account SET name = $1,email = $2,is_admin = $3  WHERE id = $4`,
 			account.Name, account.Email, account.Admin, account.ID)
 	} else {
-		res, err = s.db.ExecContext(ctx, `UPDATE account SET name = $1,email = $2,password_hash = $3,is_admin = $4  WHERE id = $2`,
+		res, err = s.db.ExecContext(ctx, `UPDATE account SET name = $1,email = $2,password_hash = $3,is_admin = $4  WHERE id = $5`,
 			account.Name, account.Email, account.PasswordHash, account.Admin, account.ID)
+	}
+
+	if err != nil {
+		err = enrichPQError(err, "account.name")
+		return fmt.Errorf("updating account: %w", err)
+	}
+	err = checkAffectedRows(res, bookstore.NewNoResultError("account", err))
+	if err != nil {
+		return fmt.Errorf("updating account=%v: %w", account.ID, err)
+	}
+	return nil
+}
+
+// SafeUpdateAccount updates the provided account using its ID
+// note that CreatedAt, UpdatedAt, admin cannot be set
+func (s *Store) SafeUpdateAccount(ctx context.Context, account bookstore.Account) error {
+	if account.ID == uuid.Nil {
+		return bookstore.ErrMissingID
+	}
+	var res sql.Result
+	var err error
+	if account.PasswordHash == "" {
+		//if password hash is empty, we don't update it
+		res, err = s.db.ExecContext(ctx, `UPDATE account SET name = $1,email = $2  WHERE id = $4`,
+			account.Name, account.Email, account.ID)
+	} else {
+		res, err = s.db.ExecContext(ctx, `UPDATE account SET name = $1,email = $2,password_hash = $3  WHERE id = $5`,
+			account.Name, account.Email, account.PasswordHash, account.ID)
 	}
 
 	if err != nil {

@@ -20,6 +20,8 @@ func (h *Handler) CreateAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	account := *data.Account
+	account.Admin = false
+
 	var err error
 	//we hash the password first, since incoming request contains the plain password
 	account.PasswordHash, err = h.auth.Hash(account.PasswordHash)
@@ -49,14 +51,7 @@ func (h *Handler) GetAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	account, err := h.store.GetAccount(r.Context(), ses.ID)
-
-	if err != nil {
-		_ = render.Render(w, r, ErrQueryResponse(err))
-		return
-	}
-
-	if err := render.Render(w, r, NewUserAccountResponse(account)); err != nil {
+	if err := render.Render(w, r, NewUserAccountResponse(ses.Account)); err != nil {
 		_ = render.Render(w, r, ErrRender(err))
 		return
 	}
@@ -80,7 +75,7 @@ func (h *Handler) UpdateAccount(w http.ResponseWriter, r *http.Request) {
 	//we disallow updating password directly
 	account.PasswordHash = ""
 
-	err := h.store.UpdateAccount(r.Context(), account)
+	err := h.store.SafeUpdateAccount(r.Context(), account)
 	if err != nil {
 		_ = render.Render(w, r, ErrQueryResponse(err))
 		return
@@ -206,7 +201,7 @@ func (a *UserAccountRequest) Bind(_ *http.Request) error {
 
 type UserAccountResponse struct {
 	*bookstore.Account
-	ProtectedHash string `json:"password"`
+	ProtectedHash string `json:"password,omitempty"`
 }
 
 func NewUserAccountResponse(account bookstore.Account) *UserAccountResponse {

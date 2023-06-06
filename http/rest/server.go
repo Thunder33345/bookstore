@@ -117,6 +117,7 @@ type store interface {
 	GetAccountByEmail(ctx context.Context, email string) (bookstore.Account, error)
 	ListAccounts(ctx context.Context, limit int, after uuid.UUID) ([]bookstore.Account, error)
 	UpdateAccount(ctx context.Context, account bookstore.Account) error
+	SafeUpdateAccount(ctx context.Context, account bookstore.Account) error
 	DeleteAccount(ctx context.Context, accountID uuid.UUID) error
 }
 
