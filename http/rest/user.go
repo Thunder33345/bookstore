@@ -3,6 +3,7 @@ package rest
 import (
 	"errors"
 	"net/http"
+	"net/mail"
 	"time"
 
 	"github.com/go-chi/render"
@@ -155,6 +156,11 @@ func (a *AccountRequest) Bind(_ *http.Request) error {
 	a.ProtectedID = uuid.Nil
 	a.ProtectedCreatedAt = time.Time{}
 	a.ProtectedUpdatedAt = time.Time{}
+
+	_, err := mail.ParseAddress(a.Email)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
