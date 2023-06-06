@@ -10,14 +10,15 @@ import (
 )
 
 type Auth struct {
-	ses    xsync.MapOf[string, bookstore.Session]
+	ses    *xsync.MapOf[string, bookstore.Session]
 	db     db
 	pwCost int
 }
 
 func NewAuth(db db, pwCost int) *Auth {
+	sm := xsync.NewMapOf[bookstore.Session]()
 	return &Auth{
-		ses:    xsync.MapOf[string, bookstore.Session]{},
+		ses:    sm,
 		db:     db,
 		pwCost: pwCost,
 	}
