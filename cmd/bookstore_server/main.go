@@ -34,17 +34,17 @@ func main() {
 	}
 
 	if os.Getenv("DATABASE_URL") == "" {
-		fmt.Printf("ENV DATABASE_URL missing\nShould be the connection string used to connect to psql DB.")
+		fmt.Printf("ENV DATABASE_URL missing\nShould be the connection string used to connect to psql DB.\n")
 		return
 	}
 
 	if os.Getenv("URL") == "" {
-		fmt.Printf("ENV URL missing\nShould be the canonical URL.")
+		fmt.Printf("ENV URL missing\nShould be the canonical URL.\n")
 		return
 	}
 
 	if os.Getenv("LISTEN") == "" {
-		fmt.Printf("ENV LISTEN missing\nShould be an address to listen on(0.0.0.0:8080).")
+		fmt.Printf("ENV LISTEN missing\nShould be an address to listen on(0.0.0.0:8080).\n")
 	}
 
 	fmt.Printf("Initilizing db\n")
@@ -87,7 +87,7 @@ func main() {
 		if *debugRoutes {
 			//intentionally exposes the user management endpoint without any auth middleware
 			r.Route("/debug/users", func(r chi.Router) {
-				fmt.Printf("Mounting unprotected debug router: /api/v1/debug/users")
+				fmt.Printf("Mounting unprotected debug router: /api/v1/debug/users\n")
 				r.With(restService.PaginationLimitMiddleware, restService.PaginationUUIDMiddleware).Get("/", restService.ListUsers)
 				r.Post("/", restService.CreateUser)
 				r.With(rest.UUIDCtx).Route("/{uuid}", func(r chi.Router) {
