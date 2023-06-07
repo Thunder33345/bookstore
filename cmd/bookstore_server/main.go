@@ -75,11 +75,12 @@ func main() {
 	r.Use(middleware.Recoverer)
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte("root"))
+		_, _ = w.Write([]byte("root handler\nAPI is on /api/v1/"))
 	})
 
 	//mount the API
 	r.Route("/api/v1/", func(r chi.Router) {
+		fmt.Printf("Mounting API routes on: /api/v1/\n")
 		r.Use(middleware.URLFormat)
 		r.Use(render.SetContentType(render.ContentTypeJSON))
 		restService.Mount(r)

@@ -8,7 +8,7 @@ info:
   contact: {}
 
 servers:
-  - url: https://example.io/v1
+  - url: https://example.io/api/v1
 
 components:
   securitySchemes:
