@@ -44,8 +44,7 @@ CREATE TABLE account
     password_hash text        NOT NULL CHECK (password_hash <> ''),
     is_admin      boolean     DEFAULT false,
     created_at    timestamptz DEFAULT now(),
-    updated_at    timestamptz DEFAULT now(),
-    CONSTRAINT pk_users_id PRIMARY KEY (id)
+    updated_at    timestamptz DEFAULT now()
 );
 CREATE UNIQUE INDEX index_account ON account USING btree (created_at ASC);
 
