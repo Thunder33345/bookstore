@@ -11,14 +11,12 @@ import (
 
 type Auth struct {
 	ses    session
-	db     db
 	pwCost int
 }
 
-func NewAuth(session session, db db, pwCost int) *Auth {
+func NewAuth(session session, pwCost int) *Auth {
 	return &Auth{
 		ses:    session,
-		db:     db,
 		pwCost: pwCost,
 	}
 }
@@ -59,12 +57,9 @@ func (a *Auth) DeleteSessionFor(ctx context.Context, user uuid.UUID) error {
 	return a.ses.DeleteSessionsFor(ctx, user)
 }
 
-type db interface {
-	GetAccountByEmail(ctx context.Context, email string) (bookstore.Account, error)
-}
 type session interface {
-	GetSession(ctx context.Context, token string) (bookstore.Session, error)
 	StoreSession(ctx context.Context, token string, account bookstore.Account) error
+	GetSession(ctx context.Context, token string) (bookstore.Session, error)
 	DeleteSession(ctx context.Context, token string) error
 	DeleteSessionsFor(ctx context.Context, accountID uuid.UUID) error
 }
