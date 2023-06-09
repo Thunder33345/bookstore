@@ -108,3 +108,5 @@ func (e *NonExistentIDError) Unwrap() error {
 }
 
 var ErrInvalidFileType = errors.New("invalid file type provided")
+
+var ErrInvalidSession = errors.New("invalid session token provided")
