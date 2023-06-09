@@ -16,7 +16,7 @@ func (s *Store) StoreSession(ctx context.Context, token string, account bookstor
 		err = enrichPQError(err, "session.token")
 		return err
 	}
-	return err
+	return nil
 }
 
 func (s *Store) GetSession(ctx context.Context, token string) (bookstore.Session, error) {
@@ -29,7 +29,7 @@ func (s *Store) GetSession(ctx context.Context, token string) (bookstore.Session
 	err := s.db.GetContext(ctx, &account, query, token)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			err = bookstore.NewNoResultError("session.token", err)
+			err = bookstore.ErrInvalidSession
 		}
 		return bookstore.Session{}, fmt.Errorf("selecting session.token: %w", err)
 	}
@@ -37,27 +37,17 @@ func (s *Store) GetSession(ctx context.Context, token string) (bookstore.Session
 }
 
 func (s *Store) DeleteSession(ctx context.Context, token string) error {
-	res, err := s.db.ExecContext(ctx, `DELETE FROM session WHERE token = $1`, token)
+	_, err := s.db.ExecContext(ctx, `DELETE FROM session WHERE token = $1`, token)
 	if err != nil {
-		err = enrichDeletePQError(err, "genre")
 		return fmt.Errorf("deleting session.token: %w", err)
-	}
-	err = checkAffectedRows(res, bookstore.NewNoResultError("session", err))
-	if err != nil {
-		return fmt.Errorf("deleting session: %w", err)
 	}
 	return nil
 }
 
 func (s *Store) DeleteSessionsFor(ctx context.Context, accountID uuid.UUID) error {
-	res, err := s.db.ExecContext(ctx, `DELETE FROM session WHERE account_id = $1`, accountID)
+	_, err := s.db.ExecContext(ctx, `DELETE FROM session WHERE account_id = $1`, accountID)
 	if err != nil {
-		err = enrichDeletePQError(err, "genre")
 		return fmt.Errorf("deleting session.token: %w", err)
-	}
-	err = checkAffectedRows(res, bookstore.NewNoResultError("session", err))
-	if err != nil {
-		return fmt.Errorf("deleting session: %w", err)
 	}
 	return nil
 }
