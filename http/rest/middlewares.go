@@ -110,9 +110,7 @@ var ctxISBNKey = ctxKey("isbn")
 // ISBNCtx populates the ISBN into context from url param
 func ISBNCtx(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var id string
-		//var err error
-		id = chi.URLParam(r, "isbn")
+		id := chi.URLParam(r, "isbn")
 		if id == "" {
 			_ = render.Render(w, r, ErrInvalidIDRequest(fmt.Errorf("ISBN not provided")))
 			return
@@ -153,7 +151,7 @@ func (h *Handler) MiddlewareAdminOnly(next http.Handler) http.Handler {
 			_ = render.Render(w, r, ErrSessionResponse(err))
 			return
 		}
-		if account.Admin == false {
+		if !account.Admin {
 			_ = render.Render(w, r, ErrForbidden)
 			return
 		}
@@ -227,7 +225,7 @@ func (h *Handler) validateISBN(id string) (string, error) {
 
 // stringSliceToUUID is a utility function to convert a slice of string into a slice of uuid
 func stringSliceToUUID(ids []string) ([]uuid.UUID, error) {
-	if ids == nil || len(ids) == 0 {
+	if len(ids) == 0 {
 		return nil, nil
 	}
 	uidList := make([]uuid.UUID, 0, len(ids))
