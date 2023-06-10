@@ -114,7 +114,7 @@ func (s *Store) SafeUpdateAccount(ctx context.Context, account bookstore.Account
 	var err error
 	if account.PasswordHash == "" {
 		//if password hash is empty, we don't update it
-		res, err = s.db.ExecContext(ctx, `UPDATE account SET name = $1,email = $2  WHERE id = $4`,
+		res, err = s.db.ExecContext(ctx, `UPDATE account SET name = $1,email = $2  WHERE id = $3`,
 			account.Name, account.Email, account.ID)
 	} else {
 		res, err = s.db.ExecContext(ctx, `UPDATE account SET name = $1,email = $2,password_hash = $3  WHERE id = $5`,
