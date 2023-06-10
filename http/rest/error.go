@@ -128,5 +128,34 @@ func ErrRender(err error) render.Renderer {
 
 var ErrNotFound = &ErrResponse{HTTPStatusCode: 404, MessageText: "Resource not found."}
 
-var ErrUnauthorized = &ErrResponse{HTTPStatusCode: http.StatusUnauthorized, MessageText: "Unauthorized."}
-var ErrForbidden = &ErrResponse{HTTPStatusCode: http.StatusForbidden, MessageText: "Forbidden."}
+var ErrForbidden = &ErrResponse{HTTPStatusCode: http.StatusForbidden, MessageText: "Unauthorized, insufficient permissions."}
+
+func ErrSessionResponse(err error) render.Renderer {
+	e := &ErrResponse{
+		Err:            err,
+		HTTPStatusCode: http.StatusInternalServerError,
+		MessageText:    "Unhandled internal error while authenticating.",
+		ErrorText:      err.Error(),
+	}
+
+	switch {
+	case errors.Is(e.Err, bookstore.ErrMalformedSession):
+		e.HTTPStatusCode = http.StatusUnauthorized
+		e.MessageText = "Malformed authorization header provided."
+		e.ErrorText = ""
+	case errors.Is(e.Err, bookstore.ErrMissingSession):
+		e.HTTPStatusCode = http.StatusUnauthorized
+		e.MessageText = "Missing required session token."
+		e.ErrorText = ""
+	case errors.Is(e.Err, bookstore.ErrInvalidSession):
+		e.HTTPStatusCode = http.StatusUnauthorized
+		e.MessageText = "Invalid session token provided."
+		e.ErrorText = ""
+	case errors.Is(e.Err, bookstore.ErrMissingSessionData):
+		e.HTTPStatusCode = http.StatusInternalServerError
+		e.MessageText = "Handler fail to retrieve session data."
+		e.ErrorText = ""
+	}
+
+	return e
+}

@@ -35,7 +35,10 @@ func (h *Handler) CreateAccount(w http.ResponseWriter, r *http.Request) {
 		_ = render.Render(w, r, ErrQueryResponse(err))
 		return
 	}
-	tok := h.auth.CreateSession(created)
+	tok, err := h.auth.CreateSession(r.Context(), created)
+	if err != nil {
+		_ = render.Render(w, r, ErrSessionResponse(err))
+	}
 
 	render.Status(r, http.StatusOK)
 	_ = render.Render(w, r, NewSessionCreateResponse(tok, created))
@@ -151,7 +154,10 @@ func (h *Handler) CreateAccountSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tok := h.auth.CreateSession(acc)
+	tok, err := h.auth.CreateSession(r.Context(), acc)
+	if err != nil {
+		_ = render.Render(w, r, ErrSessionResponse(err))
+	}
 
 	render.Status(r, http.StatusOK)
 	_ = render.Render(w, r, NewSessionCreateResponse(tok, acc))
@@ -165,6 +171,7 @@ func (h *Handler) DeleteAccountSession(w http.ResponseWriter, r *http.Request) {
 		_ = render.Render(w, r, ErrUnauthorized)
 		return
 	}
+	var err error
 
 	all, err := strconv.ParseBool(r.URL.Query().Get("all"))
 	if err != nil {
@@ -172,9 +179,12 @@ func (h *Handler) DeleteAccountSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if all {
-		h.auth.DeleteSessionFor(ses.ID)
+		err = h.auth.DeleteSessionFor(r.Context(), ses.ID)
 	} else {
-		h.auth.DeleteSession(tok)
+		err = h.auth.DeleteSession(r.Context(), tok)
+	}
+	if err != nil {
+		_ = render.Render(w, r, ErrSessionResponse(err))
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
