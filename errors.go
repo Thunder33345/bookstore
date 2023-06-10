@@ -109,4 +109,17 @@ func (e *NonExistentIDError) Unwrap() error {
 
 var ErrInvalidFileType = errors.New("invalid file type provided")
 
+// Errors related to session
+
+// ErrMissingSession is used when session token is required but not provided
+var ErrMissingSession = errors.New("missing session token")
+
+// ErrMalformedSession is used when session token is malformed
+var ErrMalformedSession = errors.New("malformed session token provided")
+
+// ErrInvalidSession is used when session token is invalid
 var ErrInvalidSession = errors.New("invalid session token provided")
+
+// ErrMissingSessionData is used when handlers fail to extract session data from context
+// this is considered an internal error, as auth enforcing middlewares shouldn't let it through in the first place
+var ErrMissingSessionData = errors.New("failed to retrieve session data")
