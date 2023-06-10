@@ -48,9 +48,9 @@ func (h *Handler) CreateAccount(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetAccount(w http.ResponseWriter, r *http.Request) {
 	ses, ok := GetSession(r.Context())
 	if !ok {
-		//we try to get the session from auth,
-		//but if we didn't get that, it means the account isn't logged in
-		_ = render.Render(w, r, ErrUnauthorized)
+		//we try to get the session from context,
+		//it should have been populated otherwise middleware wouldn't let the request through
+		_ = render.Render(w, r, ErrSessionResponse(bookstore.ErrMissingSessionData))
 		return
 	}
 
@@ -64,7 +64,7 @@ func (h *Handler) GetAccount(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UpdateAccount(w http.ResponseWriter, r *http.Request) {
 	ses, ok := GetSession(r.Context())
 	if !ok {
-		_ = render.Render(w, r, ErrUnauthorized)
+		_ = render.Render(w, r, ErrSessionResponse(bookstore.ErrMissingSessionData))
 		return
 	}
 
@@ -92,7 +92,7 @@ func (h *Handler) UpdateAccount(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UpdateAccountPassword(w http.ResponseWriter, r *http.Request) {
 	ses, ok := GetSession(r.Context())
 	if !ok {
-		_ = render.Render(w, r, ErrUnauthorized)
+		_ = render.Render(w, r, ErrSessionResponse(bookstore.ErrMissingSessionData))
 		return
 	}
 	data := &PasswordUpdateRequest{}
@@ -168,14 +168,18 @@ func (h *Handler) CreateAccountSession(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) DeleteAccountSession(w http.ResponseWriter, r *http.Request) {
 	ses, tok, ok := GetSessionAndToken(r.Context())
 	if !ok {
-		_ = render.Render(w, r, ErrUnauthorized)
+		_ = render.Render(w, r, ErrSessionResponse(bookstore.ErrMissingSessionData))
 		return
 	}
 	var err error
+	all := false
 
-	all, err := strconv.ParseBool(r.URL.Query().Get("all"))
-	if err != nil {
-		_ = render.Render(w, r, ErrInvalidRequest(err))
+	if query := r.URL.Query().Get("all"); query != "" {
+		all, err = strconv.ParseBool(query)
+		if err != nil {
+			_ = render.Render(w, r, ErrInvalidRequest(err))
+			return
+		}
 	}
 
 	if all {

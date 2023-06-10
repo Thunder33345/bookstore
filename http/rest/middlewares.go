@@ -2,7 +2,6 @@ package rest
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -137,7 +136,7 @@ func (h *Handler) MiddlewareAuthenticatedOnly(next http.Handler) http.Handler {
 		//so other handlers can also use them
 		r, _, err := h.populateSession(r)
 		if err != nil {
-			_ = render.Render(w, r, ErrUnauthorized)
+			_ = render.Render(w, r, ErrSessionResponse(err))
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -151,7 +150,7 @@ func (h *Handler) MiddlewareAdminOnly(next http.Handler) http.Handler {
 		//so other handlers can also use them
 		r, account, err := h.populateSession(r)
 		if err != nil {
-			_ = render.Render(w, r, ErrUnauthorized)
+			_ = render.Render(w, r, ErrSessionResponse(err))
 			return
 		}
 		if account.Admin == false {
@@ -162,8 +161,6 @@ func (h *Handler) MiddlewareAdminOnly(next http.Handler) http.Handler {
 	})
 }
 
-var ErrInvalidCredentials = errors.New("invalid credentials")
-
 // populateSession tries to populate session data into context using header
 func (h *Handler) populateSession(r *http.Request) (*http.Request, bookstore.Session, error) {
 	//if it's already populated, we skip it
@@ -173,8 +170,11 @@ func (h *Handler) populateSession(r *http.Request) (*http.Request, bookstore.Ses
 	}
 
 	ah := r.Header.Get("Authorization")
+	if ah == "" {
+		return r, bookstore.Session{}, bookstore.ErrMissingSession
+	}
 	if !strings.HasPrefix(ah, "Bearer ") {
-		return r, bookstore.Session{}, ErrInvalidCredentials
+		return r, bookstore.Session{}, bookstore.ErrMalformedSession
 	}
 	ah = strings.TrimLeft(ah, "Bearer ")
 
