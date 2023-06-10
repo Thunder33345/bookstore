@@ -93,7 +93,7 @@ components:
           type: string
         genre_id:
           type: string
-        published_year:
+        publish_year:
           type: integer
         fiction:
           type: boolean
