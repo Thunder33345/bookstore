@@ -22,7 +22,6 @@ type Book struct {
 type CoverData struct {
 	ISBN      string
 	CoverFile string `db:"cover_file"`
-	FileType  string `db:"file_type"`
 
 	CreatedAt time.Time `db:"created_at"`
 	UpdatedAt time.Time `db:"updated_at"`
