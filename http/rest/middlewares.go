@@ -174,7 +174,7 @@ func (h *Handler) populateSession(r *http.Request) (*http.Request, bookstore.Ses
 	if !strings.HasPrefix(ah, "Bearer ") {
 		return r, bookstore.Session{}, bookstore.ErrMalformedSession
 	}
-	ah = strings.TrimLeft(ah, "Bearer ")
+	ah = strings.TrimPrefix(ah, "Bearer ")
 
 	account, err := h.auth.GetSession(r.Context(), ah)
 	if err != nil {
