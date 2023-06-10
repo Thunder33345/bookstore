@@ -93,7 +93,6 @@ func (h *Handler) DeleteGenre(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
-	return
 }
 
 type GenreRequest struct {
@@ -104,7 +103,7 @@ type GenreRequest struct {
 	ProtectedUpdatedAt time.Time `json:"updated_at"`
 }
 
-func (a *GenreRequest) Bind(r *http.Request) error {
+func (a *GenreRequest) Bind(_ *http.Request) error {
 	if a.Genre == nil {
 		return errors.New("missing required genre fields")
 	}
@@ -124,7 +123,7 @@ func NewGenreResponse(genre bookstore.Genre) *GenreResponse {
 	return resp
 }
 
-func (rd *GenreResponse) Render(w http.ResponseWriter, r *http.Request) error {
+func (rd *GenreResponse) Render(_ http.ResponseWriter, _ *http.Request) error {
 	return nil
 }
 

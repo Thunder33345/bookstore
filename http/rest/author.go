@@ -93,7 +93,6 @@ func (h *Handler) DeleteAuthor(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
-	return
 }
 
 type AuthorRequest struct {
@@ -104,7 +103,7 @@ type AuthorRequest struct {
 	ProtectedUpdatedAt time.Time `json:"updated_at"`
 }
 
-func (a *AuthorRequest) Bind(r *http.Request) error {
+func (a *AuthorRequest) Bind(_ *http.Request) error {
 	if a.Author == nil {
 		return errors.New("missing required author fields")
 	}
@@ -124,7 +123,7 @@ func NewAuthorResponse(author bookstore.Author) *AuthorResponse {
 	return resp
 }
 
-func (rd *AuthorResponse) Render(w http.ResponseWriter, r *http.Request) error {
+func (rd *AuthorResponse) Render(_ http.ResponseWriter, _ *http.Request) error {
 	return nil
 }
 

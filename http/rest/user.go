@@ -131,7 +131,6 @@ func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
-	return
 }
 
 func (h *Handler) DeleteUserSessions(w http.ResponseWriter, r *http.Request) {

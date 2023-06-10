@@ -119,7 +119,6 @@ func (h *Handler) DeleteBook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
-	return
 }
 
 type BookRequest struct {
@@ -131,7 +130,7 @@ type BookRequest struct {
 	ProtectedUpdatedAt time.Time `json:"updated_at"`
 }
 
-func (b *BookRequest) Bind(r *http.Request) error {
+func (b *BookRequest) Bind(_ *http.Request) error {
 	if b.Book == nil {
 		return errors.New("missing required book fields")
 	}
@@ -154,7 +153,7 @@ func NewBookResponse(book bookstore.Book, coverResolver coverResolver) *BookResp
 	return resp
 }
 
-func (b *BookResponse) Render(w http.ResponseWriter, r *http.Request) error {
+func (b *BookResponse) Render(_ http.ResponseWriter, _ *http.Request) error {
 	b.Book.CoverURL = b.resolver(b.Book.CoverURL)
 	return nil
 }
