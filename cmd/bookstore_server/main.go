@@ -109,6 +109,26 @@ func main() {
 	fmt.Printf("Initilizing server\n")
 	server := &http.Server{Addr: os.Getenv("LISTEN"), Handler: r}
 
+	serverCtx := gracefulShutdown(server)
+
+	if *routes {
+		fmt.Println(docgen.MarkdownRoutesDoc(r, docgen.MarkdownOpts{
+			ProjectPath: "github.com/thunder33345/bookstore",
+		}))
+		return
+	}
+
+	fmt.Printf("Listening for request on %s\n", server.Addr)
+	err = server.ListenAndServe()
+	if err != nil && err != http.ErrServerClosed {
+		fmt.Printf("Error while listening: %v\n", err)
+	}
+
+	<-serverCtx.Done()
+	fmt.Printf("Server Exited\n")
+}
+
+func gracefulShutdown(server *http.Server) context.Context {
 	//some context and signals for graceful shutdown
 	serverCtx, serverStopCtx := context.WithCancel(context.Background())
 	sig := make(chan os.Signal, 1)
@@ -133,20 +153,5 @@ func main() {
 		}
 		serverStopCtx()
 	}()
-
-	if *routes {
-		fmt.Println(docgen.MarkdownRoutesDoc(r, docgen.MarkdownOpts{
-			ProjectPath: "github.com/thunder33345/bookstore",
-		}))
-		return
-	}
-
-	fmt.Printf("Listening for request on %s\n", server.Addr)
-	err = server.ListenAndServe()
-	if err != nil && err != http.ErrServerClosed {
-		fmt.Printf("Error while listening: %v\n", err)
-	}
-
-	<-serverCtx.Done()
-	fmt.Printf("Server Exited\n")
+	return serverCtx
 }
