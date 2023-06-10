@@ -13,10 +13,19 @@ type Book struct {
 	GenreID     uuid.UUID `json:"genre_id" db:"genre_id"`
 	PublishYear int       `json:"publish_year" db:"publish_year"`
 	Fiction     bool      `json:"fiction"`
-	CoverURL    string    `json:"cover_url" db:"cover_file"`
+	CoverURL    string    `json:"cover_url"`
 
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+}
+
+type CoverData struct {
+	ISBN      string
+	CoverFile string `db:"cover_file"`
+	FileType  string `db:"file_type"`
+
+	CreatedAt time.Time `db:"created_at"`
+	UpdatedAt time.Time `db:"updated_at"`
 }
 
 type Genre struct {
