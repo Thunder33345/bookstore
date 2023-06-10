@@ -2,6 +2,7 @@ package fs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/thanhpk/randstr"
 	"github.com/thunder33345/bookstore"
 	"github.com/thunder33345/bookstore/http/rest"
 )
@@ -42,16 +44,23 @@ func NewStore(fileDir string, webMount string, db dbStore) (*Store, error) {
 }
 
 // StoreCover stores the cover file system
-func (s *Store) StoreCover(ctx context.Context, bookID string, img io.ReadSeeker) error {
+func (s *Store) StoreCover(ctx context.Context, isbn string, img io.ReadSeeker) error {
 	//we detect and enforce the image types first
-	ext, err := detectExt(img)
+	fileType, err := detectType(img)
 	if err != nil {
 		return err
 	}
-	resourceName := bookID + ext
+
+	ext, err := typeToExt(fileType)
+	if err != nil {
+		return err
+	}
+
+	//a random padding helps with bypassing caching
+	resourceName := isbn + "_" + randstr.Hex(4) + ext
 
 	//we create the img file, stored inside storeDir
-	dst, err := os.Create(filepath.Join(s.storeDir, resourceName))
+	dst, err := os.Create(s.getPath(resourceName))
 	if err != nil {
 		return err
 	}
@@ -63,32 +72,46 @@ func (s *Store) StoreCover(ctx context.Context, bookID string, img io.ReadSeeker
 	}
 
 	//finally we update the stored resource into our db
-	return s.db.UpdateBookCover(ctx, bookID, resourceName)
+	_, err = s.db.UpsertCoverData(ctx, bookstore.CoverData{
+		ISBN:      isbn,
+		CoverFile: resourceName,
+	})
+	return err
 }
 
-// RemoveCover remove the stored cover file and updates the db
-func (s *Store) RemoveCover(ctx context.Context, bookID string) error {
-	book, err := s.db.GetBook(ctx, bookID)
+// RemoveCover remove the stored cover file from disk and db
+func (s *Store) RemoveCover(ctx context.Context, isbn string) error {
+	cover, err := s.db.GetCoverData(ctx, isbn)
+	if err != nil {
+		if isNoResultError(err) {
+			return nil
+		}
+		return err
+	}
+
+	err = os.Remove(s.getPath(cover.CoverFile))
+	//we allow removing from the db if the file no longer exist on disk
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
+	err = s.db.DeleteCoverData(ctx, isbn)
 	if err != nil {
 		return err
 	}
-	if book.CoverURL == "" {
-		return nil
-	}
-	err = os.Remove(filepath.Join(s.storeDir, book.CoverURL))
-	if err != nil {
-		return err
-	}
-	return s.db.UpdateBookCover(ctx, bookID, "")
+	return nil
 }
 
-// ResolveCover turns a cover file metadata from the database into a canonical URL
-// we need to know the mount point of HandleCoverRequest to do this
-func (s *Store) ResolveCover(coverFile string) string {
-	if coverFile == "" {
-		return ""
+// GetCoverURL returns the cover URL if available, empty string is returned when there is no cover
+func (s *Store) GetCoverURL(ctx context.Context, isbn string) (string, error) {
+	data, err := s.db.GetCoverData(ctx, isbn)
+	if err != nil {
+		if isNoResultError(err) {
+			return "", nil
+		}
+		return "", err
 	}
-	return s.mountPoint + coverFile
+	return s.mountPoint + data.CoverFile, nil
 }
 
 // HandleCoverRequest is a http handler mounted to match ResolveCover to display the cover file
@@ -111,11 +134,6 @@ func (s *Store) HandleCoverRequest(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	buf, err := io.ReadAll(file)
-	if err != nil {
-		_ = render.Render(w, r, rest.ErrInvalidRequest(fmt.Errorf("failed reading file: %w", err)))
-		return
-	}
 	//we get the content type necessary for browsers to display it properly via file extension
 	typ, err := extToType(fileName)
 	if err != nil {
@@ -124,8 +142,7 @@ func (s *Store) HandleCoverRequest(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", typ)
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(buf)
-
+	_, _ = io.Copy(w, file)
 }
 
 // getPath is a helper to join create path prefixed with storeDir
@@ -135,13 +152,12 @@ func (s *Store) getPath(cover string) string {
 
 // dbStore is a minimal interface of psql.Store
 type dbStore interface {
-	GetBook(ctx context.Context, bookID string) (bookstore.Book, error)
-	UpdateBookCover(ctx context.Context, bookID string, coverFile string) error
+	UpsertCoverData(ctx context.Context, cover bookstore.CoverData) (bookstore.CoverData, error)
+	GetCoverData(ctx context.Context, isbn string) (bookstore.CoverData, error)
+	DeleteCoverData(ctx context.Context, isbn string) error
 }
 
-// detectExt detects file and provide relevant extension
-// returns error if detected result is not jpeg or png
-func detectExt(file io.ReadSeeker) (string, error) {
+func detectType(file io.ReadSeeker) (string, error) {
 	//we create a buffer to detect img type
 	//512 bytes because that's at most of what http.DetectContentType considers
 	buff := make([]byte, 512)
@@ -150,17 +166,14 @@ func detectExt(file io.ReadSeeker) (string, error) {
 		return "", err
 	}
 
-	ext, err := typeToExt(http.DetectContentType(buff))
-	if err != nil {
-		return "", err
-	}
+	fileType := http.DetectContentType(buff)
 
 	//we seek back to the start before copying
 	_, err = file.Seek(0, io.SeekStart)
 	if err != nil {
 		return "", err
 	}
-	return ext, nil
+	return fileType, nil
 }
 
 // typeToExt convert filetype into an extension
@@ -186,4 +199,9 @@ func extToType(filename string) (string, error) {
 	default:
 		return "", fmt.Errorf("unknown file extension")
 	}
+}
+
+func isNoResultError(err error) bool {
+	var noRes *bookstore.NoResultError
+	return errors.As(err, &noRes)
 }
