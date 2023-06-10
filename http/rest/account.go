@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/render"
 	"github.com/google/uuid"
 	"github.com/thunder33345/bookstore"
+	passwordvalidator "github.com/wagslane/go-password-validator"
 )
 
 // CreateAccount handles signup
@@ -21,6 +22,16 @@ func (h *Handler) CreateAccount(w http.ResponseWriter, r *http.Request) {
 	}
 	account := *data.Account
 	account.Admin = false
+
+	if data.PasswordHash == "" {
+		_ = render.Render(w, r, ErrInvalidRequest(fmt.Errorf("no password provided")))
+		return
+	}
+
+	if err := passwordvalidator.Validate(data.PasswordHash, h.minPWEntropy); err != nil {
+		_ = render.Render(w, r, ErrInvalidRequest(err))
+		return
+	}
 
 	var err error
 	//we hash the password first, since incoming request contains the plain password
@@ -97,6 +108,20 @@ func (h *Handler) UpdateAccountPassword(w http.ResponseWriter, r *http.Request) 
 	}
 	data := &PasswordUpdateRequest{}
 	if err := render.Bind(r, data); err != nil {
+		_ = render.Render(w, r, ErrInvalidRequest(err))
+		return
+	}
+
+	if data.OldPassword == data.NewPassword {
+		_ = render.Render(w, r, ErrInvalidRequest(fmt.Errorf("same password provided")))
+		return
+	}
+	if data.NewPassword == "" {
+		_ = render.Render(w, r, ErrInvalidRequest(fmt.Errorf("no new password provided")))
+		return
+	}
+
+	if err := passwordvalidator.Validate(data.NewPassword, h.minPWEntropy); err != nil {
 		_ = render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}

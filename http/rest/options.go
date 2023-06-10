@@ -18,3 +18,10 @@ func WithIgnoreInvalidISBN(b bool) Option {
 		return h
 	}
 }
+
+func WithMinPasswordEntropy(minEntropy float64) Option {
+	return func(h Handler) Handler {
+		h.minPWEntropy = minEntropy
+		return h
+	}
+}

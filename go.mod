@@ -3,7 +3,6 @@ module github.com/thunder33345/bookstore
 go 1.20
 
 require (
-	github.com/alecthomas/repr v0.2.0
 	github.com/go-chi/chi/v5 v5.0.8
 	github.com/go-chi/docgen v1.2.0
 	github.com/go-chi/render v1.0.2
@@ -23,5 +22,6 @@ require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/thanhpk/randstr v1.0.6 // indirect
+	github.com/wagslane/go-password-validator v0.3.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 )

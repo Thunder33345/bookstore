@@ -18,6 +18,7 @@ type Handler struct {
 	defaultListLimit  int
 	maxListLimit      int
 	ignoreInvalidIBSN bool
+	minPWEntropy      float64
 }
 
 // NewHandler creates a new Handler with given parameters
@@ -28,6 +29,7 @@ func NewHandler(store store, cover coverStore, auth authService, options ...Opti
 		auth:             auth,
 		defaultListLimit: 50,
 		maxListLimit:     100,
+		minPWEntropy:     65,
 	}
 	for _, option := range options {
 		h = option(h)
