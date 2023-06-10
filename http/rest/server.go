@@ -141,8 +141,8 @@ type coverStore interface {
 type authService interface {
 	Hash(password string) (string, error)
 	Validate(hash string, password string) (bool, error)
-	GetSession(token string) (bookstore.Session, bool)
-	CreateSession(account bookstore.Account) string
-	DeleteSession(token string)
-	DeleteSessionFor(user uuid.UUID)
+	GetSession(ctx context.Context, token string) (bookstore.Session, error)
+	CreateSession(ctx context.Context, account bookstore.Account) (string, error)
+	DeleteSession(ctx context.Context, token string) error
+	DeleteSessionFor(ctx context.Context, user uuid.UUID) error
 }
