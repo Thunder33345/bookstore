@@ -136,7 +136,11 @@ func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) DeleteUserSessions(w http.ResponseWriter, r *http.Request) {
 	id := r.Context().Value(ctxUUIDKey).(uuid.UUID)
-	h.auth.DeleteSessionFor(id)
+	err := h.auth.DeleteSessionFor(r.Context(), id)
+	if err != nil {
+		_ = render.Render(w, r, ErrQueryResponse(err))
+		return
+	}
 	w.WriteHeader(http.StatusNoContent)
 }
 
