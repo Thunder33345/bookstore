@@ -34,7 +34,7 @@ func (h *Handler) CreateBook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	render.Status(r, http.StatusOK)
-	_ = render.Render(w, r, NewBookResponse(created, h.cover.ResolveCover))
+	_ = render.Render(w, r, NewBookResponse(created, h.cover))
 }
 
 func (h *Handler) GetBook(w http.ResponseWriter, r *http.Request) {
@@ -47,7 +47,7 @@ func (h *Handler) GetBook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := render.Render(w, r, NewBookResponse(book, h.cover.ResolveCover)); err != nil {
+	if err := render.Render(w, r, NewBookResponse(book, h.cover)); err != nil {
 		_ = render.Render(w, r, ErrRender(err))
 		return
 	}
@@ -82,7 +82,7 @@ func (h *Handler) ListBooks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := render.RenderList(w, r, NewListBookResponse(books, h.cover.ResolveCover)); err != nil {
+	if err := render.RenderList(w, r, NewListBookResponse(books, h.cover)); err != nil {
 		_ = render.Render(w, r, ErrRender(err))
 		return
 	}
@@ -142,26 +142,29 @@ func (b *BookRequest) Bind(_ *http.Request) error {
 	return nil
 }
 
-type coverResolver func(coverFile string) string
 type BookResponse struct {
 	*bookstore.Book
-	resolver coverResolver
+	cover coverStore
 }
 
-func NewBookResponse(book bookstore.Book, coverResolver coverResolver) *BookResponse {
-	resp := &BookResponse{Book: &book, resolver: coverResolver}
+func NewBookResponse(book bookstore.Book, cover coverStore) *BookResponse {
+	resp := &BookResponse{Book: &book, cover: cover}
 	return resp
 }
 
-func (b *BookResponse) Render(_ http.ResponseWriter, _ *http.Request) error {
-	b.Book.CoverURL = b.resolver(b.Book.CoverURL)
+func (b *BookResponse) Render(_ http.ResponseWriter, r *http.Request) error {
+	url, err := b.cover.GetCoverURL(r.Context(), b.ISBN)
+	if err != nil {
+		return err
+	}
+	b.Book.CoverURL = url
 	return nil
 }
 
-func NewListBookResponse(books []bookstore.Book, resolver coverResolver) []render.Renderer {
+func NewListBookResponse(books []bookstore.Book, cover coverStore) []render.Renderer {
 	list := make([]render.Renderer, 0, len(books))
 	for _, article := range books {
-		list = append(list, NewBookResponse(article, resolver))
+		list = append(list, NewBookResponse(article, cover))
 	}
 	return list
 }

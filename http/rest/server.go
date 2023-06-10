@@ -135,9 +135,9 @@ type store interface {
 
 // coverStore is a minimal interface of fs.Store
 type coverStore interface {
-	StoreCover(ctx context.Context, bookID string, img io.ReadSeeker) error
-	RemoveCover(ctx context.Context, bookID string) error
-	ResolveCover(coverFile string) string
+	StoreCover(ctx context.Context, isbn string, img io.ReadSeeker) error
+	RemoveCover(ctx context.Context, isbn string) error
+	GetCoverURL(ctx context.Context, isbn string) (string, error)
 }
 
 type authService interface {
