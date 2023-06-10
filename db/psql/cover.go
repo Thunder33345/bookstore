@@ -12,7 +12,7 @@ import (
 func (s *Store) UpsertCoverData(ctx context.Context, cover bookstore.CoverData) (bookstore.CoverData, error) {
 	query :=
 		`INSERT INTO cover_data(isbn,cover_file) VALUES ($1,$2)
-            ON CONFLICT DO UPDATE SET cover_file = excluded.cover_file
+            ON CONFLICT(isbn) DO UPDATE SET cover_file = excluded.cover_file
         RETURNING *`
 	row := s.db.QueryRowxContext(ctx, query, cover.ISBN, cover.CoverFile)
 	if err := row.Err(); err != nil {
