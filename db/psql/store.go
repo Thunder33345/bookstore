@@ -129,6 +129,8 @@ func enrichPQError(err error, resource string) error {
 			err = bookstore.NewInvalidDependencyError("author", err)
 		case "fk_genre":
 			err = bookstore.NewInvalidDependencyError("genre", err)
+		case "fk_isbn":
+			err = bookstore.NewNoResultError("book.isbn", err)
 		}
 	}
 	return err

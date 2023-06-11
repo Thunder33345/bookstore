@@ -16,7 +16,7 @@ func (s *Store) UpsertCoverData(ctx context.Context, cover bookstore.CoverData) 
         RETURNING *`
 	row := s.db.QueryRowxContext(ctx, query, cover.ISBN, cover.CoverFile)
 	if err := row.Err(); err != nil {
-		err = enrichPQError(err, "genre.name")
+		err = enrichPQError(err, "cover.isbn")
 		return bookstore.CoverData{}, fmt.Errorf("creating cover.isbn=%s: %w", cover.ISBN, err)
 	}
 
