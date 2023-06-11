@@ -17,8 +17,8 @@ import (
 // returns the uuid of the created book when successful
 func (s *Store) CreateBook(ctx context.Context, book bookstore.Book) (bookstore.Book, error) {
 	row := s.db.QueryRowxContext(ctx,
-		`INSERT INTO book(isbn,title,publish_year,fiction, cover_file,author_id,genre_id)
-				VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`, book.ISBN, book.Title, book.PublishYear, book.Fiction, book.CoverURL, book.AuthorID, book.GenreID)
+		`INSERT INTO book(isbn,title,publish_year,fiction,author_id,genre_id)
+				VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`, book.ISBN, book.Title, book.PublishYear, book.Fiction, book.AuthorID, book.GenreID)
 	if err := row.Err(); err != nil {
 		err = enrichPQError(err, "book.isbn")
 		return bookstore.Book{}, fmt.Errorf("creating book: %w", err)
@@ -113,8 +113,8 @@ func (s *Store) UpdateBook(ctx context.Context, book bookstore.Book) error {
 	if !book.UpdatedAt.IsZero() {
 		opt.Comma(`updated_at = $1`, book.UpdatedAt)
 	}
-	q := bqb.New(`UPDATE book SET title = ?, publish_year = ?, fiction = ?, cover_file = ?, author_id = ?, genre_id = ? ? WHERE isbn = ?`,
-		book.Title, book.PublishYear, book.Fiction, book.CoverURL, book.AuthorID, book.GenreID, opt, book.ISBN)
+	q := bqb.New(`UPDATE book SET title = ?, publish_year = ?, fiction = ?, author_id = ?, genre_id = ? ? WHERE isbn = ?`,
+		book.Title, book.PublishYear, book.Fiction, book.AuthorID, book.GenreID, opt, book.ISBN)
 	query, args, err := q.ToPgsql()
 	if err != nil {
 		return fmt.Errorf("bqb building query: %w", err)
@@ -130,20 +130,6 @@ func (s *Store) UpdateBook(ctx context.Context, book bookstore.Book) error {
 		return fmt.Errorf("updating book=%s: %w", book.ISBN, err)
 	}
 
-	return nil
-}
-
-// UpdateBookCover updates the provided book cover using an ID
-func (s *Store) UpdateBookCover(ctx context.Context, bookID string, cover string) error {
-	res, err := s.db.ExecContext(ctx, `UPDATE book SET cover_file = $1 WHERE isbn = $2`, cover, bookID)
-	if err != nil {
-		err = enrichPQError(err, "book.isbn")
-		return fmt.Errorf("updating book cover: %w", err)
-	}
-	err = checkAffectedRows(res, bookstore.NewNoResultError("book", err))
-	if err != nil {
-		return fmt.Errorf("updating book cover: %w", err)
-	}
 	return nil
 }
 
