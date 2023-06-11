@@ -153,7 +153,7 @@ func NewBookResponse(book bookstore.Book, cover coverStore) *BookResponse {
 }
 
 func (b *BookResponse) Render(_ http.ResponseWriter, r *http.Request) error {
-	url, err := b.cover.GetCoverURL(r.Context(), b.ISBN)
+	url, err := b.cover.ResolveCoverURL(r.Context(), *b.Book)
 	if err != nil {
 		return err
 	}

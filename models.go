@@ -15,6 +15,8 @@ type Book struct {
 	Fiction     bool      `json:"fiction"`
 	CoverURL    string    `json:"cover_url"`
 
+	CoverData *string `json:"-" db:"cover_file"`
+
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }

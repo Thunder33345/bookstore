@@ -114,6 +114,14 @@ func (s *Store) GetCoverURL(ctx context.Context, isbn string) (string, error) {
 	return s.mountPoint + data.CoverFile, nil
 }
 
+// ResolveCoverURL returns the cover URL from book data if available, empty string is returned when there is no cover
+func (s *Store) ResolveCoverURL(_ context.Context, book bookstore.Book) (string, error) {
+	if book.CoverData == nil || *book.CoverData == "" {
+		return "", nil
+	}
+	return s.mountPoint + *book.CoverData, nil
+}
+
 // HandleCoverRequest is a http handler mounted to match ResolveCover to display the cover file
 // it expects the {image} param to be available from chi
 func (s *Store) HandleCoverRequest(w http.ResponseWriter, r *http.Request) {

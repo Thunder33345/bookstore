@@ -138,6 +138,7 @@ type coverStore interface {
 	StoreCover(ctx context.Context, isbn string, img io.ReadSeeker) error
 	RemoveCover(ctx context.Context, isbn string) error
 	GetCoverURL(ctx context.Context, isbn string) (string, error)
+	ResolveCoverURL(ctx context.Context, book bookstore.Book) (string, error)
 }
 
 type authService interface {

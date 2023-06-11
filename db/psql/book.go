@@ -35,7 +35,7 @@ func (s *Store) CreateBook(ctx context.Context, book bookstore.Book) (bookstore.
 // GetBook fetches n book using its ID
 func (s *Store) GetBook(ctx context.Context, bookID string) (bookstore.Book, error) {
 	var book bookstore.Book
-	err := s.db.GetContext(ctx, &book, `SELECT * FROM book WHERE isbn = $1 LIMIT 1`, bookID)
+	err := s.db.GetContext(ctx, &book, `SELECT * FROM book b INNER JOIN cover_data c ON b.isbn = c.isbn WHERE b.isbn = $1 LIMIT 1`, bookID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = bookstore.NewNoResultError("book.isbn", err)
@@ -56,26 +56,26 @@ func (s *Store) ListBooks(ctx context.Context, limit int, after string, genresId
 	var err error
 	//using bqb to build more complicated queries
 	//sel is on the beginning simply for readability
-	sel := bqb.New(`SELECT * FROM book`)
+	sel := bqb.New(`SELECT b.*, c.cover_file FROM book b LEFT JOIN cover_data c ON b.isbn = c.isbn`)
 
 	where := bqb.Optional(`WHERE`)
 	if after != "" {
 		//if after uuid is provided, we add WHERE created_at > after via sub query to perform pagination
 		//we use COALESCE to trigger a function that raises error if the selected ISBN does not exist
-		where.Space(`created_at > COALESCE((SELECT created_at FROM genre WHERE isbn = ?),raise_error_tz('Nonexistent ISBN'))`, after)
+		where.Space(`b.created_at > COALESCE((SELECT created_at FROM book WHERE isbn = ?),raise_error_tz('Nonexistent ISBN'))`, after)
 	}
 	if len(genresId) > 0 {
-		where.And(`genre_id IN (?)`, genresId)
+		where.And(`b.genre_id IN (?)`, genresId)
 	}
 	if len(authorsId) > 0 {
-		where.And(`author_id IN (?)`, authorsId)
+		where.And(`b.author_id IN (?)`, authorsId)
 	}
 
 	//we set the order to allow overwriting it when searching
 	order := bqb.New(`ORDER BY created_at`)
 	if searchTitle != "" {
-		where.And(`SIMILARITY(title, ?) > 0.1`, searchTitle)
-		order = bqb.New(`ORDER BY SIMILARITY(title, ?) DESC`, searchTitle)
+		where.And(`SIMILARITY(b.title, ?) > 0.1`, searchTitle)
+		order = bqb.New(`ORDER BY SIMILARITY(b.title, ?) DESC`, searchTitle)
 	}
 	q := bqb.New(`? ? ? LIMIT ?`, sel, where, order, limit)
 
