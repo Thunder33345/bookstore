@@ -59,6 +59,12 @@ func (s *Store) StoreCover(ctx context.Context, isbn string, img io.ReadSeeker) 
 	//a random padding helps with bypassing caching
 	resourceName := isbn + "_" + randstr.Hex(4) + ext
 
+	//remove old covers before creating a new one, if any
+	err = s.removeCoverFile(ctx, isbn)
+	if err != nil {
+		return err
+	}
+
 	//we create the img file, stored inside storeDir
 	dst, err := os.Create(s.getPath(resourceName))
 	if err != nil {
@@ -81,6 +87,21 @@ func (s *Store) StoreCover(ctx context.Context, isbn string, img io.ReadSeeker) 
 
 // RemoveCover remove the stored cover file from disk and db
 func (s *Store) RemoveCover(ctx context.Context, isbn string) error {
+	err := s.removeCoverFile(ctx, isbn)
+	if err != nil {
+		return err
+	}
+
+	err = s.db.DeleteCoverData(ctx, isbn)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// removeCoverFile is an unexported helper to remove the file without touching db
+// note that the db entry should be updated after calling this
+func (s *Store) removeCoverFile(ctx context.Context, isbn string) error {
 	cover, err := s.db.GetCoverData(ctx, isbn)
 	if err != nil {
 		if isNoResultError(err) {
@@ -92,11 +113,6 @@ func (s *Store) RemoveCover(ctx context.Context, isbn string) error {
 	err = os.Remove(s.getPath(cover.CoverFile))
 	//we allow removing from the db if the file no longer exist on disk
 	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
-
-	err = s.db.DeleteCoverData(ctx, isbn)
-	if err != nil {
 		return err
 	}
 	return nil
