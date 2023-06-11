@@ -35,7 +35,7 @@ func (s *Store) CreateBook(ctx context.Context, book bookstore.Book) (bookstore.
 // GetBook fetches n book using its ID
 func (s *Store) GetBook(ctx context.Context, bookID string) (bookstore.Book, error) {
 	var book bookstore.Book
-	err := s.db.GetContext(ctx, &book, `SELECT * FROM book b INNER JOIN cover_data c ON b.isbn = c.isbn WHERE b.isbn = $1 LIMIT 1`, bookID)
+	err := s.db.GetContext(ctx, &book, `SELECT b.*, c.cover_file FROM book b LEFT JOIN cover_data c ON b.isbn = c.isbn WHERE b.isbn = $1 LIMIT 1`, bookID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = bookstore.NewNoResultError("book.isbn", err)
