@@ -111,8 +111,13 @@ func (h *Handler) UpdateBook(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) DeleteBook(w http.ResponseWriter, r *http.Request) {
 	id := r.Context().Value(ctxISBNKey).(string)
 
-	err := h.store.DeleteBook(r.Context(), id)
+	err := h.cover.RemoveCover(r.Context(), id)
+	if err != nil {
+		_ = render.Render(w, r, ErrQueryResponse(err))
+		return
+	}
 
+	err = h.store.DeleteBook(r.Context(), id)
 	if err != nil {
 		_ = render.Render(w, r, ErrQueryResponse(err))
 		return
