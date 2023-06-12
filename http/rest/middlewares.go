@@ -168,7 +168,7 @@ func (h *Handler) populateSession(r *http.Request) (*http.Request, bookstore.Ses
 	}
 
 	ah := r.Header.Get("Authorization")
-	if ah == "" {
+	if ah == "" || ah == "Bearer" {
 		return r, bookstore.Session{}, bookstore.ErrMissingSession
 	}
 	if !strings.HasPrefix(ah, "Bearer ") {
