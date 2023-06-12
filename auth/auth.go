@@ -41,7 +41,7 @@ func (a *Auth) GetSession(ctx context.Context, token string) (bookstore.Session,
 }
 
 func (a *Auth) CreateSession(ctx context.Context, account bookstore.Account) (string, error) {
-	sessionToken := randstr.Base62(16)
+	sessionToken := randstr.Base62(32)
 	err := a.ses.StoreSession(ctx, sessionToken, account)
 	if err != nil {
 		return "", err
